@@ -4,6 +4,7 @@ import { Text } from "@/components/atoms/Text";
 const links = [
   { href: "/", label: "Dashboard" },
   { href: "/products", label: "Products" },
+  { href: "/login", label: "Login" },
 ];
 
 export function Sidebar() {
