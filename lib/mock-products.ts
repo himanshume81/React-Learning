@@ -7,6 +7,7 @@ export const mockProducts: Product[] = [
     price: 79.99,
     category: "Electronics",
     description: "Noise-cancelling over-ear headphones with 30h battery.",
+    status: "in_stock",
   },
   {
     id: "2",
@@ -14,6 +15,7 @@ export const mockProducts: Product[] = [
     price: 129.0,
     category: "Electronics",
     description: "Compact layout with hot-swappable switches.",
+    status: "low_stock",
   },
   {
     id: "3",
@@ -21,6 +23,7 @@ export const mockProducts: Product[] = [
     price: 45.5,
     category: "Home",
     description: "Adjustable LED lamp with warm and cool light modes.",
+    status: "in_stock",
   },
   {
     id: "4",
@@ -28,6 +31,7 @@ export const mockProducts: Product[] = [
     price: 18.0,
     category: "Stationery",
     description: "Pack of 3 dotted notebooks, 120 pages each.",
+    status: "in_stock",
   },
   {
     id: "5",
@@ -35,6 +39,7 @@ export const mockProducts: Product[] = [
     price: 24.99,
     category: "Outdoors",
     description: "Insulated stainless steel, keeps drinks cold for 24h.",
+    status: "out_of_stock",
   },
   {
     id: "6",
@@ -42,6 +47,7 @@ export const mockProducts: Product[] = [
     price: 49.99,
     category: "Electronics",
     description: "7-in-1 adapter with HDMI, SD card, and fast charging.",
+    status: "in_stock",
   },
   {
     id: "7",
@@ -49,6 +55,7 @@ export const mockProducts: Product[] = [
     price: 35.0,
     category: "Home",
     description: "Anti-fatigue mat with beveled edges for standing desks.",
+    status: "low_stock",
   },
   {
     id: "8",
@@ -56,6 +63,7 @@ export const mockProducts: Product[] = [
     price: 12.5,
     category: "Stationery",
     description: "Smooth-writing gel pens in assorted colors, pack of 10.",
+    status: "in_stock",
   },
   {
     id: "9",
@@ -63,6 +71,7 @@ export const mockProducts: Product[] = [
     price: 32.0,
     category: "Outdoors",
     description: "Rechargeable LED lantern with three brightness levels.",
+    status: "in_stock",
   },
   {
     id: "10",
@@ -70,6 +79,7 @@ export const mockProducts: Product[] = [
     price: 59.99,
     category: "Electronics",
     description: "1080p webcam with built-in microphone and privacy cover.",
+    status: "low_stock",
   },
   {
     id: "11",
@@ -77,6 +87,7 @@ export const mockProducts: Product[] = [
     price: 28.0,
     category: "Home",
     description: "Soft cotton cover with removable insert, 18x18 inches.",
+    status: "in_stock",
   },
   {
     id: "12",
@@ -84,6 +95,7 @@ export const mockProducts: Product[] = [
     price: 8.99,
     category: "Stationery",
     description: "Assorted neon colors, 3x3 inches, 12 pads per pack.",
+    status: "out_of_stock",
   },
 ];
 

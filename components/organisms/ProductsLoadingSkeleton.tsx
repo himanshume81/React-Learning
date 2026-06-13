@@ -6,13 +6,16 @@ const SKELETON_ROWS = 5;
 
 function MobileCardSkeleton() {
   return (
-    <article className="rounded-lg border border-border bg-surface p-4">
+    <article className="rounded-xl border border-border border-l-4 border-l-zinc-300 bg-surface p-4 shadow-sm dark:border-l-zinc-600">
       <div className="flex items-start justify-between gap-3">
         <Skeleton className="h-4 w-2/5" />
-        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-6 w-16" />
       </div>
       <Skeleton className="mt-2 h-4 w-full" />
-      <Skeleton className="mt-3 h-5 w-24" />
+      <div className="mt-3 flex gap-2">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-5 w-20" />
+      </div>
     </article>
   );
 }
@@ -37,37 +40,46 @@ export function ProductsLoadingSkeleton() {
           ))}
         </div>
 
-        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface md:block">
-          <table className="w-full text-left text-sm" aria-busy="true">
-            <thead className="border-b border-border bg-surface-muted">
-              <tr>
-                <th className="px-3 py-3 font-medium md:px-4">Name</th>
-                <th className="hidden px-3 py-3 font-medium lg:table-cell lg:px-4">
-                  Description
-                </th>
-                <th className="px-3 py-3 font-medium md:px-4">Category</th>
-                <th className="px-3 py-3 font-medium md:px-4">Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: SKELETON_ROWS }, (_, index) => (
-                <tr key={index} className="border-b border-border">
-                  <td className="px-3 py-3 md:px-4">
-                    <Skeleton className="h-4 w-28 md:w-32" />
-                  </td>
-                  <td className="hidden px-3 py-3 lg:table-cell lg:px-4">
-                    <Skeleton className="h-4 w-full max-w-xs" />
-                  </td>
-                  <td className="px-3 py-3 md:px-4">
-                    <Skeleton className="h-4 w-20 md:w-24" />
-                  </td>
-                  <td className="px-3 py-3 md:px-4">
-                    <Skeleton className="h-4 w-14 md:w-16" />
-                  </td>
+        <div className="hidden overflow-hidden rounded-xl border border-border bg-surface shadow-sm md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm" aria-busy="true">
+              <thead className="border-b border-border bg-surface-muted text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                <tr>
+                  <th className="px-3 py-3 md:px-4">Name</th>
+                  <th className="hidden px-3 py-3 lg:table-cell lg:px-4">
+                    Description
+                  </th>
+                  <th className="px-3 py-3 md:px-4">Category</th>
+                  <th className="px-3 py-3 md:px-4">Status</th>
+                  <th className="px-3 py-3 md:px-4">Price</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-border even:bg-surface-muted/40 last:border-b-0"
+                  >
+                    <td className="px-3 py-3.5 md:px-4">
+                      <Skeleton className="h-4 w-28 md:w-32" />
+                    </td>
+                    <td className="hidden px-3 py-3.5 lg:table-cell lg:px-4">
+                      <Skeleton className="h-4 w-full max-w-xs" />
+                    </td>
+                    <td className="px-3 py-3.5 md:px-4">
+                      <Skeleton className="h-5 w-24" />
+                    </td>
+                    <td className="px-3 py-3.5 md:px-4">
+                      <Skeleton className="h-5 w-20" />
+                    </td>
+                    <td className="px-3 py-3.5 md:px-4">
+                      <Skeleton className="h-4 w-14 md:w-16" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <Text className="text-sm text-zinc-500">Loading products...</Text>
