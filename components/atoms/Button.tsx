@@ -10,10 +10,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-foreground text-background hover:opacity-90",
+  primary: "bg-primary text-primary-foreground hover:opacity-90",
   secondary:
-    "border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900",
-  ghost: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
+    "border border-border bg-secondary text-secondary-foreground hover:bg-muted",
+  ghost: "text-foreground hover:bg-muted",
 };
 
 export function Button({

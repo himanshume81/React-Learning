@@ -24,7 +24,7 @@ export function RouteStatusLayout({
           {title}
         </Text>
         {description && (
-          <Text className="mt-2 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
+          <Text className="mt-2 max-w-md text-sm text-muted-foreground">
             {description}
           </Text>
         )}
@@ -39,7 +39,7 @@ export function RouteLoadingLayout({ message = "Loading page..." }: { message?: 
     <AppLayout>
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4">
         <Spinner size="md" />
-        <Text className="text-sm text-zinc-600 dark:text-zinc-400">{message}</Text>
+        <Text className="text-sm text-muted-foreground">{message}</Text>
       </div>
     </AppLayout>
   );

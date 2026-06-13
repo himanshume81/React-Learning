@@ -17,8 +17,8 @@ export function ThemeToggle() {
         aria-pressed={resolvedTheme === "light"}
         className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
           resolvedTheme === "light"
-            ? "bg-foreground text-background"
-            : "text-zinc-600 hover:text-foreground dark:text-zinc-400 dark:hover:text-foreground"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
       >
         Light
@@ -29,8 +29,8 @@ export function ThemeToggle() {
         aria-pressed={resolvedTheme === "dark"}
         className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
           resolvedTheme === "dark"
-            ? "bg-foreground text-background"
-            : "text-zinc-600 hover:text-foreground dark:text-zinc-400 dark:hover:text-foreground"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
       >
         Dark

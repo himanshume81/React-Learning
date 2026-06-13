@@ -14,8 +14,8 @@ export function NavLink({ href, label, active = false }: NavLinkProps) {
       href={href}
       className={`rounded-md px-3 py-2 text-sm transition-colors ${
         active
-          ? "bg-zinc-200 font-medium dark:bg-zinc-800"
-          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+          ? "bg-muted font-medium text-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
       }`}
     >
       {label}

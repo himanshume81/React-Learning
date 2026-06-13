@@ -23,7 +23,7 @@ const SKELETON_ROWS = 5;
 const tableWrapperClass =
   "overflow-hidden rounded-xl border border-border bg-surface shadow-sm";
 const tableHeadClass =
-  "border-b border-border bg-surface-muted text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400";
+  "border-b border-border bg-surface-muted text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 const tableRowClass =
   "border-b border-border transition-colors last:border-b-0 even:bg-surface-muted/40 hover:bg-surface-muted/70";
 
@@ -37,7 +37,7 @@ function formatPrice(price: number) {
 function ProductCard({ product }: { product: Product }) {
   return (
     <article
-      className={`rounded-xl border border-border border-l-4 bg-surface p-4 shadow-sm transition-all hover:border-zinc-300 hover:shadow-md dark:hover:border-zinc-600 ${getStatusBorderClass(product.status)}`}
+      className={`rounded-xl border border-border border-l-4 bg-surface p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md ${getStatusBorderClass(product.status)}`}
     >
       <div className="flex items-start justify-between gap-3">
         <Text className="text-sm font-semibold sm:text-base">{product.name}</Text>
@@ -45,7 +45,7 @@ function ProductCard({ product }: { product: Product }) {
           {formatPrice(product.price)}
         </Text>
       </div>
-      <Text className="mt-2 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
+      <Text className="mt-2 line-clamp-2 text-sm text-muted-foreground">
         {product.description}
       </Text>
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -139,7 +139,7 @@ function ProductTableDesktop({
                   <td className="px-3 py-3.5 font-semibold md:px-4 lg:py-4">
                     {product.name}
                   </td>
-                  <td className="hidden max-w-xs px-3 py-3.5 text-zinc-600 lg:table-cell lg:px-4 lg:py-4 dark:text-zinc-400">
+                  <td className="hidden max-w-xs px-3 py-3.5 text-muted-foreground lg:table-cell lg:px-4 lg:py-4">
                     {product.description}
                   </td>
                   <td className="px-3 py-3.5 md:px-4 lg:py-4">
@@ -197,7 +197,7 @@ export function ProductTable({
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-muted-foreground">
           <Spinner size="sm" />
           <Text>Loading products...</Text>
         </div>

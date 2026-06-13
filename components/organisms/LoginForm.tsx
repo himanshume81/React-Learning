@@ -60,7 +60,7 @@ export function LoginForm() {
         <Text as="h1" className="text-2xl font-semibold">
           Already signed in
         </Text>
-        <Text className="text-sm text-zinc-600 dark:text-zinc-400">
+        <Text className="text-sm text-muted-foreground">
           You are already logged in. Go back to the dashboard to continue.
         </Text>
         <Button className="w-full" onClick={() => router.push("/")}>
@@ -80,7 +80,7 @@ export function LoginForm() {
         <Text as="h1" className="text-2xl font-semibold">
           Sign in
         </Text>
-        <Text className="text-sm text-zinc-600 dark:text-zinc-400">
+        <Text className="text-sm text-muted-foreground">
           Enter your email and password to continue.
         </Text>
       </div>

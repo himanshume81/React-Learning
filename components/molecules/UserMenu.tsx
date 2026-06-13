@@ -12,7 +12,7 @@ export function UserMenu() {
 
   if (isLoading) {
     return (
-      <Text className="text-sm text-zinc-500" aria-live="polite">
+      <Text className="text-sm text-muted-foreground" aria-live="polite">
         ...
       </Text>
     );
@@ -22,7 +22,7 @@ export function UserMenu() {
     return (
       <Link
         href="/login"
-        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+        className="rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-muted"
       >
         Sign in
       </Link>
@@ -33,7 +33,7 @@ export function UserMenu() {
     <div className="flex items-center gap-3">
       <div className="hidden text-right sm:block">
         <Text className="text-sm font-medium">{user.name}</Text>
-        <Text className="text-xs text-zinc-500">{user.email}</Text>
+        <Text className="text-xs text-muted-foreground">{user.email}</Text>
       </div>
       <Button
         variant="secondary"

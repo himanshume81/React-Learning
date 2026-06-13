@@ -14,7 +14,7 @@ export function Card({ title, description, footer }: CardProps) {
         {title}
       </Text>
       {description && (
-        <Text className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+        <Text className="mt-2 text-sm text-muted-foreground">
           {description}
         </Text>
       )}

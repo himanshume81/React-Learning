@@ -95,7 +95,7 @@ export function ProductListContainer() {
           <Text as="h1" className="text-xl font-semibold sm:text-2xl">
             Products
           </Text>
-          <Text className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <Text className="mt-1 text-sm text-muted-foreground">
             Browse products in a table with search, filter, and pagination.
           </Text>
         </div>
@@ -185,7 +185,7 @@ export function ProductListContainer() {
 
       {!isLoading && filteredProducts.length > 0 && (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <Text className="text-center text-sm text-zinc-500 sm:text-left">
+          <Text className="text-center text-sm text-muted-foreground sm:text-left">
             Showing {rangeStart}–{rangeEnd} of {filteredProducts.length} product
             {filteredProducts.length === 1 ? "" : "s"}
           </Text>
@@ -199,7 +199,7 @@ export function ProductListContainer() {
             >
               Previous
             </Button>
-            <Text className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+            <Text className="text-center text-sm text-muted-foreground">
               Page {currentPage} of {totalPages}
             </Text>
             <Button

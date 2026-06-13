@@ -43,7 +43,7 @@ export function ProductsLoadingSkeleton() {
         <div className="hidden overflow-hidden rounded-xl border border-border bg-surface shadow-sm md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm" aria-busy="true">
-              <thead className="border-b border-border bg-surface-muted text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <thead className="border-b border-border bg-surface-muted text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="px-3 py-3 md:px-4">Name</th>
                   <th className="hidden px-3 py-3 lg:table-cell lg:px-4">
@@ -82,7 +82,7 @@ export function ProductsLoadingSkeleton() {
           </div>
         </div>
 
-        <Text className="text-sm text-zinc-500">Loading products...</Text>
+        <Text className="text-sm text-muted-foreground">Loading products...</Text>
       </section>
     </AppLayout>
   );

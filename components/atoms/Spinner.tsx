@@ -13,7 +13,7 @@ export function Spinner({ size = "md", className = "" }: SpinnerProps) {
     <div
       role="status"
       aria-label="Loading"
-      className={`animate-spin rounded-full border-zinc-300 border-t-foreground dark:border-zinc-700 dark:border-t-zinc-100 ${sizeStyles[size]} ${className}`}
+      className={`animate-spin rounded-full border-muted border-t-primary ${sizeStyles[size]} ${className}`}
     />
   );
 }
