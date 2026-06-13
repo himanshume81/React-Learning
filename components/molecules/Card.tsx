@@ -9,7 +9,7 @@ type CardProps = {
 
 export function Card({ title, description, footer }: CardProps) {
   return (
-    <article className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <article className="rounded-xl border border-border bg-surface p-6 shadow-sm">
       <Text as="h3" className="text-lg font-semibold">
         {title}
       </Text>

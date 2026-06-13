@@ -1,15 +1,29 @@
-import { NavLink } from "@/components/molecules/NavLink";
-import { Text } from "@/components/atoms/Text";
+"use client";
 
-const links = [
+import { Text } from "@/components/atoms/Text";
+import { NavLink } from "@/components/molecules/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
+
+const publicLinks = [
   { href: "/", label: "Dashboard" },
   { href: "/products", label: "Products" },
-  { href: "/login", label: "Login" },
 ];
 
 export function Sidebar() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-zinc-200 p-4 md:block dark:border-zinc-800">
+    <aside className="hidden w-64 shrink-0 border-r border-border bg-surface-muted p-4 md:block">
+      {isAuthenticated && user && (
+        <div className="mb-6 rounded-lg border border-border bg-surface p-3">
+          <Text className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Signed in as
+          </Text>
+          <Text className="mt-1 text-sm font-medium">{user.name}</Text>
+          <Text className="text-xs text-zinc-500">{user.email}</Text>
+        </div>
+      )}
+
       <Text
         as="h2"
         className="mb-4 px-3 text-xs font-semibold uppercase tracking-wide text-zinc-500"
@@ -17,9 +31,12 @@ export function Sidebar() {
         Menu
       </Text>
       <nav className="flex flex-col gap-1">
-        {links.map((link) => (
+        {publicLinks.map((link) => (
           <NavLink key={link.href} href={link.href} label={link.label} />
         ))}
+        {!isLoading && !isAuthenticated && (
+          <NavLink href="/login" label="Login" />
+        )}
       </nav>
     </aside>
   );

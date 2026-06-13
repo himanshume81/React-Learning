@@ -8,11 +8,11 @@ type AppLayoutProps = {
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Header />
-      <div className="flex flex-1">
+      <div className="flex flex-1 bg-background">
         <Sidebar />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 bg-background p-6">{children}</main>
       </div>
     </div>
   );
