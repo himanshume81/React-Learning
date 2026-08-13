@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
-import { Pagination } from "@/components/molecules/Pagination";
+import { Pagination, type PageSize } from "@/components/molecules/Pagination";
 import { SearchFilterBar } from "@/components/molecules/SearchFilterBar";
 import { UserTable } from "@/components/organisms/UserTable";
 import { useDebounce } from "@/lib/hooks/use-debounce";
@@ -18,7 +18,14 @@ const ConfirmDialog = dynamic(() =>
   import("@/components/molecules/ConfirmDialog").then((m) => m.ConfirmDialog)
 );
 
-const PAGE_SIZE = 10;
+// "All" is sent to the mock API as a pageSize larger than any possible
+// result set, so the existing slice(start, start + pageSize) logic just
+// returns everything on a single page — no API changes needed.
+const ALL_PAGE_SIZE = Number.MAX_SAFE_INTEGER;
+
+function toApiPageSize(pageSize: PageSize) {
+  return pageSize === "all" ? ALL_PAGE_SIZE : pageSize;
+}
 
 export function UsersPageContainer() {
   const [users, setUsers] = useState<User[]>([]);
@@ -29,6 +36,7 @@ export function UsersPageContainer() {
   const [searchInput, setSearchInput] = useState("");
   const [status, setStatus] = useState<UserStatus | "all">("all");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(10);
 
   const [userPendingDelete, setUserPendingDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -40,26 +48,35 @@ export function UsersPageContainer() {
   // is no longer guaranteed valid. Reset to the first page.
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, status]);
+  }, [debouncedSearch, status, pageSize]);
 
   useEffect(() => {
     let ignore = false;
     setIsLoading(true);
 
-    fetchUsers({ search: debouncedSearch, status, page, pageSize: PAGE_SIZE }).then(
-      (result) => {
-        if (ignore) return;
-        setUsers(result.data);
-        setTotal(result.total);
-        setTotalPages(result.totalPages);
-        setIsLoading(false);
-      }
-    );
+    fetchUsers({
+      search: debouncedSearch,
+      status,
+      page,
+      pageSize: toApiPageSize(pageSize),
+    }).then((result) => {
+      if (ignore) return;
+      setUsers(result.data);
+      setTotal(result.total);
+      setTotalPages(result.totalPages);
+      setIsLoading(false);
+    });
 
     return () => {
       ignore = true;
     };
-  }, [debouncedSearch, status, page, refreshKey]);
+  }, [debouncedSearch, status, page, pageSize, refreshKey]);
+
+  // Position of the current page's results within the full filtered set,
+  // e.g. "11-18 of 18" rather than the ambiguous "8 of 18" on the last page.
+  const effectivePageSize = pageSize === "all" ? total || 1 : pageSize;
+  const rangeStart = (page - 1) * effectivePageSize + 1;
+  const rangeEnd = rangeStart + users.length - 1;
 
   const handleConfirmDelete = async () => {
     if (!userPendingDelete) return;
@@ -71,7 +88,10 @@ export function UsersPageContainer() {
     // If that was the last user on the last page, step back a page so we
     // don't land on a now-empty page. Otherwise just re-run the fetch effect.
     const remaining = total - 1;
-    const newTotalPages = Math.max(1, Math.ceil(remaining / PAGE_SIZE));
+    const newTotalPages = Math.max(
+      1,
+      Math.ceil(remaining / toApiPageSize(pageSize))
+    );
     if (page > newTotalPages) {
       setPage(newTotalPages);
     } else {
@@ -108,13 +128,16 @@ export function UsersPageContainer() {
         onDelete={setUserPendingDelete}
       />
 
-      {!isLoading && users.length > 0 && (
-        <Text className="text-sm text-zinc-500">
-          Showing {users.length} of {total} user{total === 1 ? "" : "s"}
-        </Text>
-      )}
-
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        total={total}
+      />
 
       {userPendingDelete && (
         <ConfirmDialog
