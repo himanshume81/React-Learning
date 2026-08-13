@@ -1,6 +1,7 @@
 import { Logo } from "@/components/atoms/Logo";
 import { NavLink } from "@/components/molecules/NavLink";
-import Link from "next/link";
+import { ThemeToggle } from "@/components/molecules/ThemeToggle";
+import { UserMenu } from "@/components/molecules/UserMenu";
 
 export function Header() {
   return (
@@ -8,17 +9,15 @@ export function Header() {
       <Logo />
 
       <nav className="hidden items-center gap-2 md:flex">
-        <NavLink href="/" label="Home" active />
-        <NavLink href="/about" label="About" />
-        <NavLink href="/contact" label="Contact" />
+        <NavLink href="/dashboard" label="Dashboard" />
+        <NavLink href="/dashboard/users" label="Users" />
+        <NavLink href="/products" label="Products" />
       </nav>
 
-      <Link
-        href="/login"
-        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-      >
-        Sign in
-      </Link>
+      <div className="flex items-center gap-3">
+        <ThemeToggle />
+        <UserMenu />
+      </div>
     </header>
   );
 }

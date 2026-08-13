@@ -3,15 +3,19 @@
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
 import { FormField } from "@/components/molecules/FormField";
+import { useAuth } from "@/context/AuthContext";
 import {
   loginSchema,
   type LoginFormValues,
 } from "@/lib/validation/login-schema";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 export function LoginForm() {
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const { login } = useAuth();
+  const router = useRouter();
 
   const {
     register,
@@ -19,7 +23,6 @@ export function LoginForm() {
     setError,
     clearErrors,
     formState: { errors, isSubmitting },
-    reset,
   } = useForm<LoginFormValues>({
     defaultValues: {
       email: "",
@@ -44,7 +47,8 @@ export function LoginForm() {
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     setSubmitMessage(`Welcome back! Logged in as ${result.data.email}`);
-    reset();
+    login(result.data.email);
+    router.replace("/dashboard");
   };
 
   return (
