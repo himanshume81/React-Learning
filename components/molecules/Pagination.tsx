@@ -1,5 +1,6 @@
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
+import { memo } from "react";
 
 type PaginationProps = {
   page: number;
@@ -7,7 +8,14 @@ type PaginationProps = {
   onPageChange: (page: number) => void;
 };
 
-export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
+// Memoized: page/totalPages only change once the debounced search/filter
+// fetch resolves, so this should bail out while the parent re-renders on
+// every keystroke of the (unrelated) search input.
+export const Pagination = memo(function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+}: PaginationProps) {
   if (totalPages <= 1) {
     return null;
   }
@@ -33,4 +41,4 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
       </Button>
     </div>
   );
-}
+});

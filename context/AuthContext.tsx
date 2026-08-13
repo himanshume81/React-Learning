@@ -2,8 +2,10 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -56,24 +58,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("unauthenticated");
   }, []);
 
-  const login = (email: string) => {
+  const login = useCallback((email: string) => {
     const nextUser: AuthUser = { name: deriveName(email), email };
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser));
     setUser(nextUser);
     setStatus("authenticated");
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
     setUser(null);
     setStatus("unauthenticated");
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, status, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+  // Memoized so toggling theme (AuthProvider's parent re-rendering) doesn't
+  // hand every useAuth() consumer a new object when auth state hasn't changed.
+  const value = useMemo(
+    () => ({ user, status, login, logout }),
+    [user, status, login, logout]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

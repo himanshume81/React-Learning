@@ -2,15 +2,21 @@
 
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { Pagination } from "@/components/molecules/Pagination";
 import { SearchFilterBar } from "@/components/molecules/SearchFilterBar";
 import { UserTable } from "@/components/organisms/UserTable";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { deleteUser, fetchUsers } from "@/lib/mock-users";
 import type { User, UserStatus } from "@/types/user";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
+// Only needed once a user clicks Delete, so it's split into its own chunk
+// instead of shipping in this route's initial JS.
+const ConfirmDialog = dynamic(() =>
+  import("@/components/molecules/ConfirmDialog").then((m) => m.ConfirmDialog)
+);
 
 const PAGE_SIZE = 10;
 
@@ -110,15 +116,17 @@ export function UsersPageContainer() {
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
-      <ConfirmDialog
-        open={Boolean(userPendingDelete)}
-        title="Delete user"
-        message={`Are you sure you want to delete ${userPendingDelete?.name}? This can't be undone.`}
-        confirmLabel="Delete"
-        isPending={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setUserPendingDelete(null)}
-      />
+      {userPendingDelete && (
+        <ConfirmDialog
+          open
+          title="Delete user"
+          message={`Are you sure you want to delete ${userPendingDelete.name}? This can't be undone.`}
+          confirmLabel="Delete"
+          isPending={isDeleting}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setUserPendingDelete(null)}
+        />
+      )}
     </section>
   );
 }

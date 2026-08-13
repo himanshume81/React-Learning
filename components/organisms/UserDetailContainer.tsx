@@ -5,13 +5,19 @@ import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
-import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { deleteUser, fetchUserById } from "@/lib/mock-users";
 import type { User } from "@/types/user";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+// Only needed once a user clicks Delete, so it's split into its own chunk
+// instead of shipping in this route's initial JS.
+const ConfirmDialog = dynamic(() =>
+  import("@/components/molecules/ConfirmDialog").then((m) => m.ConfirmDialog)
+);
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -111,15 +117,17 @@ export function UserDetailContainer({ userId }: { userId: string }) {
         </Link>
       </div>
 
-      <ConfirmDialog
-        open={confirmingDelete}
-        title="Delete user"
-        message={`Are you sure you want to delete ${user.name}? This can't be undone.`}
-        confirmLabel="Delete"
-        isPending={isDeleting}
-        onConfirm={handleDelete}
-        onCancel={() => setConfirmingDelete(false)}
-      />
+      {confirmingDelete && (
+        <ConfirmDialog
+          open
+          title="Delete user"
+          message={`Are you sure you want to delete ${user.name}? This can't be undone.`}
+          confirmLabel="Delete"
+          isPending={isDeleting}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </section>
   );
 }

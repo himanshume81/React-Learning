@@ -4,7 +4,7 @@ import { UserCardSkeleton } from "@/components/molecules/UserCardSkeleton";
 import { UserRow } from "@/components/molecules/UserRow";
 import { UserRowSkeleton } from "@/components/molecules/UserRowSkeleton";
 import type { User } from "@/types/user";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 type UserTableProps = {
   users: User[];
@@ -15,7 +15,15 @@ type UserTableProps = {
 
 const SKELETON_COUNT = 5;
 
-export function UserTable({ users, isLoading, onDelete, emptyAction }: UserTableProps) {
+// Memoized: users/isLoading only change once the debounced search/filter
+// fetch resolves, so this should bail out while the parent re-renders on
+// every keystroke of the (unrelated) search input.
+export const UserTable = memo(function UserTable({
+  users,
+  isLoading,
+  onDelete,
+  emptyAction,
+}: UserTableProps) {
   if (!isLoading && users.length === 0) {
     return (
       <EmptyState
@@ -64,4 +72,4 @@ export function UserTable({ users, isLoading, onDelete, emptyAction }: UserTable
       </div>
     </>
   );
-}
+});

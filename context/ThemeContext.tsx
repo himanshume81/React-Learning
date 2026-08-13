@@ -2,8 +2,10 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -40,14 +42,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
-  const setTheme = (next: Theme) => setThemeState(next);
-  const toggleTheme = () =>
-    setThemeState((current) => (current === "dark" ? "light" : "dark"));
+  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
+  const toggleTheme = useCallback(
+    () => setThemeState((current) => (current === "dark" ? "light" : "dark")),
+    []
+  );
+
+  // Memoized so a theme change doesn't hand AuthProvider (nested below this
+  // provider) a reason to re-derive a new auth context value on every toggle.
+  const value = useMemo(
+    () => ({ theme, setTheme, toggleTheme }),
+    [theme, setTheme, toggleTheme]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 }
 
