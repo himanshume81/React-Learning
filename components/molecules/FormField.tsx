@@ -20,7 +20,7 @@ export function FormField({
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} hasError={Boolean(error)} aria-invalid={Boolean(error)} {...inputProps} />
       {error && (
-        <Text className="text-sm text-red-600 dark:text-red-400" role="alert">
+        <Text className="text-sm text-red-600 dark:text-red-400">
           {error}
         </Text>
       )}

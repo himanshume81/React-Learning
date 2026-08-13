@@ -87,7 +87,7 @@ export function LoginForm() {
       {submitMessage && (
         <Text
           className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300"
-          role="status"
+          
         >
           {submitMessage}
         </Text>
