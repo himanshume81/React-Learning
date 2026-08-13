@@ -12,13 +12,13 @@ export function UserRowSkeleton() {
           </div>
         </div>
       </td>
-      <td className="hidden px-4 py-3 md:table-cell">
+      <td className="px-4 py-3">
         <Skeleton className="h-5 w-16 rounded-full" />
       </td>
       <td className="px-4 py-3">
         <Skeleton className="h-5 w-16 rounded-full" />
       </td>
-      <td className="hidden px-4 py-3 md:table-cell">
+      <td className="px-4 py-3">
         <Skeleton className="h-4 w-20" />
       </td>
       <td className="px-4 py-3">

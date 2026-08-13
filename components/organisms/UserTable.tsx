@@ -1,4 +1,6 @@
 import { EmptyState } from "@/components/molecules/EmptyState";
+import { UserCard } from "@/components/molecules/UserCard";
+import { UserCardSkeleton } from "@/components/molecules/UserCardSkeleton";
 import { UserRow } from "@/components/molecules/UserRow";
 import { UserRowSkeleton } from "@/components/molecules/UserRowSkeleton";
 import type { User } from "@/types/user";
@@ -25,27 +27,41 @@ export function UserTable({ users, isLoading, onDelete, emptyAction }: UserTable
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-      <table className="w-full text-left" aria-busy={isLoading}>
-        <thead>
-          <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
-            <th className="px-4 py-3 font-semibold">User</th>
-            <th className="hidden px-4 py-3 font-semibold md:table-cell">Role</th>
-            <th className="px-4 py-3 font-semibold">Status</th>
-            <th className="hidden px-4 py-3 font-semibold md:table-cell">Joined</th>
-            <th className="px-4 py-3 font-semibold">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {isLoading
-            ? Array.from({ length: SKELETON_COUNT }, (_, index) => (
-                <UserRowSkeleton key={index} />
-              ))
-            : users.map((user) => (
-                <UserRow key={user.id} user={user} onDelete={onDelete} />
-              ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      {/* Mobile: stacked cards */}
+      <div className="space-y-3 md:hidden" aria-busy={isLoading}>
+        {isLoading
+          ? Array.from({ length: SKELETON_COUNT }, (_, index) => (
+              <UserCardSkeleton key={index} />
+            ))
+          : users.map((user) => (
+              <UserCard key={user.id} user={user} onDelete={onDelete} />
+            ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden rounded-xl border border-zinc-200 md:block dark:border-zinc-800">
+        <table className="w-full text-left" aria-busy={isLoading}>
+          <thead>
+            <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+              <th className="px-4 py-3 font-semibold">User</th>
+              <th className="px-4 py-3 font-semibold">Role</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Joined</th>
+              <th className="px-4 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading
+              ? Array.from({ length: SKELETON_COUNT }, (_, index) => (
+                  <UserRowSkeleton key={index} />
+                ))
+              : users.map((user) => (
+                  <UserRow key={user.id} user={user} onDelete={onDelete} />
+                ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

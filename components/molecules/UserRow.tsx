@@ -30,7 +30,7 @@ export function UserRow({ user, onDelete }: UserRowProps) {
           </div>
         </div>
       </td>
-      <td className="hidden px-4 py-3 md:table-cell">
+      <td className="px-4 py-3">
         <Badge tone="info">{user.role}</Badge>
       </td>
       <td className="px-4 py-3">
@@ -38,7 +38,7 @@ export function UserRow({ user, onDelete }: UserRowProps) {
           {user.status}
         </Badge>
       </td>
-      <td className="hidden px-4 py-3 md:table-cell">
+      <td className="px-4 py-3">
         <Text className="text-sm text-zinc-500">{formatDate(user.joinedAt)}</Text>
       </td>
       <td className="px-4 py-3">
