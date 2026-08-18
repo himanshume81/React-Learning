@@ -6,10 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 const links = [
-  { href: "/", label: "Home" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/users", label: "Users" },
-  { href: "/products", label: "Products" },
+  { href: "/users", label: "Users" }
 ];
 
 function isActive(pathname: string, href: string) {

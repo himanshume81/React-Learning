@@ -44,13 +44,13 @@ export function UserRow({ user, onDelete }: UserRowProps) {
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <Link
-            href={`/dashboard/users/${user.id}`}
+            href={`/users/${user.id}`}
             className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
             View
           </Link>
           <Link
-            href={`/dashboard/users/${user.id}/edit`}
+            href={`/users/${user.id}/edit`}
             className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
           >
             Edit

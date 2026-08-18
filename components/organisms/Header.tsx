@@ -24,12 +24,6 @@ export function Header({ onMenuClick }: HeaderProps) {
         <Logo />
       </div>
 
-      <nav className="hidden items-center gap-2 md:flex">
-        <NavLink href="/dashboard" label="Dashboard" />
-        <NavLink href="/dashboard/users" label="Users" />
-        <NavLink href="/products" label="Products" />
-      </nav>
-
       <div className="flex items-center gap-3">
         <ThemeToggle />
         <UserMenu />

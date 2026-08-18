@@ -40,7 +40,7 @@ export function EditUserContainer({ userId }: { userId: string }) {
 
   const handleSubmit = async (values: UserFormValues) => {
     await updateUser(userId, values);
-    router.push(`/dashboard/users/${userId}`);
+    router.push(`/users/${userId}`);
   };
 
   if (notFound) {
@@ -78,7 +78,7 @@ export function EditUserContainer({ userId }: { userId: string }) {
           mode="edit"
           defaultValues={defaultValues}
           onSubmit={handleSubmit}
-          onCancel={() => router.push(`/dashboard/users/${userId}`)}
+          onCancel={() => router.push(`/users/${userId}`)}
         />
       )}
     </section>

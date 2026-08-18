@@ -11,7 +11,7 @@ export function AddUserContainer() {
 
   const handleSubmit = async (values: UserFormValues) => {
     await createUser(values);
-    router.push("/dashboard/users");
+    router.push("/users");
   };
 
   return (
@@ -28,7 +28,7 @@ export function AddUserContainer() {
       <UserForm
         mode="create"
         onSubmit={handleSubmit}
-        onCancel={() => router.push("/dashboard/users")}
+        onCancel={() => router.push("/users")}
       />
     </section>
   );

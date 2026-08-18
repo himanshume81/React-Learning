@@ -110,7 +110,7 @@ export function UsersPageContainer() {
             Search, filter, and manage user accounts.
           </Text>
         </div>
-        <Link href="/dashboard/users/add">
+        <Link href="/users/add">
           <Button>+ Add user</Button>
         </Link>
       </div>

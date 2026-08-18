@@ -53,7 +53,7 @@ export function UserDetailContainer({ userId }: { userId: string }) {
     await deleteUser(userId);
     setIsDeleting(false);
     setConfirmingDelete(false);
-    router.push("/dashboard/users");
+    router.push("/users");
   };
 
   if (isLoading) {
@@ -72,7 +72,7 @@ export function UserDetailContainer({ userId }: { userId: string }) {
         title="User not found"
         description="This user may have already been deleted."
         action={
-          <Link href="/dashboard/users">
+          <Link href="/users">
             <Button variant="secondary">Back to users</Button>
           </Link>
         }
@@ -106,13 +106,13 @@ export function UserDetailContainer({ userId }: { userId: string }) {
       </div>
 
       <div className="flex gap-3">
-        <Link href={`/dashboard/users/${user.id}/edit`}>
+        <Link href={`/users/${user.id}/edit`}>
           <Button variant="secondary">Edit</Button>
         </Link>
         <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
           Delete
         </Button>
-        <Link href="/dashboard/users">
+        <Link href="/users">
           <Button variant="ghost">Back to users</Button>
         </Link>
       </div>

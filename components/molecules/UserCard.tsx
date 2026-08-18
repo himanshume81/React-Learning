@@ -41,13 +41,13 @@ export function UserCard({ user, onDelete }: UserCardProps) {
 
       <div className="mt-4 flex items-center gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
         <Link
-          href={`/dashboard/users/${user.id}`}
+          href={`/users/${user.id}`}
           className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
         >
           View
         </Link>
         <Link
-          href={`/dashboard/users/${user.id}/edit`}
+          href={`/users/${user.id}/edit`}
           className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
         >
           Edit
