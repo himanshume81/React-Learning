@@ -22,6 +22,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resetSuccess = searchParams.get("reset") === "success";
+  const setupSuccess = searchParams.get("setup") === "success";
 
   const {
     register,
@@ -179,6 +180,15 @@ export function LoginForm() {
           role="status"
         >
           Password reset successful. Sign in with your new password.
+        </Text>
+      )}
+
+      {setupSuccess && (
+        <Text
+          className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+          role="status"
+        >
+          Password setup successful. Sign in with your new password.
         </Text>
       )}
 

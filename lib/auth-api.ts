@@ -50,6 +50,15 @@ export async function resetPassword(token: string, password: string): Promise<st
   return data.message;
 }
 
+export async function setPassword(token: string, password: string): Promise<string> {
+  const data = await apiFetch<MessageResponse>("/auth/set-password", {
+    method: "POST",
+    body: { token, password },
+  });
+
+  return data.message;
+}
+
 export async function fetchProfile(): Promise<User> {
   const raw = await apiFetch<RawUser>("/auth/profile", { auth: true });
   return toUser(raw);

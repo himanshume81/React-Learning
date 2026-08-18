@@ -19,10 +19,4 @@ export const userSchema = z.object({
   }),
 });
 
-// Add-user only: the API requires a password (min 6 characters) on create;
-// edit reuses `userSchema` since users aren't re-authenticated there.
-export const createUserSchema = userSchema.extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
 export type UserFormValues = z.infer<typeof userSchema>;

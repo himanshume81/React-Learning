@@ -5,13 +5,13 @@ import { Input } from "@/components/atoms/Input";
 import { Label } from "@/components/atoms/Label";
 import { Text } from "@/components/atoms/Text";
 import { ApiError } from "@/lib/api-client";
-import { resetPassword } from "@/lib/auth-api";
+import { setPassword } from "@/lib/auth-api";
 import {
-  resetPasswordSchema,
-  type ResetPasswordFormValues,
+  setPasswordSchema,
+  type SetPasswordFormValues,
 } from "@/lib/validation/password-reset-schema";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 function EyeIcon() {
@@ -52,10 +52,10 @@ function EyeOffIcon() {
   );
 }
 
-export function ResetPasswordForm() {
+export function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tokenFromQuery = searchParams.get("token") ?? "";
+  const token = searchParams.get("token") ?? "";
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -64,45 +64,40 @@ export function ResetPasswordForm() {
     handleSubmit,
     setError,
     clearErrors,
-    reset,
     formState: { errors, isSubmitting },
-  } = useForm<ResetPasswordFormValues>({
+  } = useForm<SetPasswordFormValues>({
     defaultValues: {
-      token: tokenFromQuery,
       password: "",
       confirmPassword: "",
     },
   });
 
-  useEffect(() => {
-    reset({
-      token: tokenFromQuery,
-      password: "",
-      confirmPassword: "",
-    });
-  }, [reset, tokenFromQuery]);
-
-  const onSubmit = async (data: ResetPasswordFormValues) => {
+  const onSubmit = async (data: SetPasswordFormValues) => {
     setFormError(null);
     clearErrors();
 
-    const result = resetPasswordSchema.safeParse(data);
+    if (!token) {
+      setFormError("Setup token is missing from the URL.");
+      return;
+    }
+
+    const result = setPasswordSchema.safeParse(data);
     if (!result.success) {
       for (const issue of result.error.issues) {
-        const field = issue.path[0] as keyof ResetPasswordFormValues;
+        const field = issue.path[0] as keyof SetPasswordFormValues;
         setError(field, { message: issue.message });
       }
       return;
     }
 
     try {
-      await resetPassword(result.data.token, result.data.password);
-      router.replace("/login?reset=success");
+      await setPassword(token, result.data.password);
+      router.replace("/login?setup=success");
     } catch (error) {
       if (error instanceof ApiError && error.status === 400) {
         const message = error.message.toLowerCase();
         if (message.includes("token")) {
-          setError("token", { message: error.message });
+          setFormError(error.message);
         } else if (message.includes("password")) {
           setError("password", { message: error.message });
         } else {
@@ -124,10 +119,10 @@ export function ResetPasswordForm() {
     >
       <div className="space-y-1">
         <Text as="h1" className="text-2xl font-semibold">
-          Reset password
+          Set password
         </Text>
         <Text className="text-sm text-zinc-600 dark:text-zinc-400">
-          Paste the reset token from your email and choose a new password.
+          Choose a password for your account using the secure link from your email.
         </Text>
       </div>
 
@@ -204,7 +199,7 @@ export function ResetPasswordForm() {
 
       <div className="space-y-3">
         <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Resetting..." : "Reset password"}
+          {isSubmitting ? "Setting password..." : "Set password"}
         </Button>
         <Button
           type="button"
