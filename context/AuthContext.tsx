@@ -1,5 +1,8 @@
 "use client";
 
+import { fetchProfile, login as loginRequest } from "@/lib/auth-api";
+import { clearTokens, getRefreshToken, setTokens } from "@/lib/auth-tokens";
+import type { User } from "@/types/user";
 import {
   createContext,
   useCallback,
@@ -10,69 +13,68 @@ import {
   type ReactNode,
 } from "react";
 
-export type AuthUser = {
-  name: string;
-  email: string;
-};
+export type AuthUser = User;
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 type AuthContextValue = {
   user: AuthUser | null;
   status: AuthStatus;
-  login: (email: string) => void;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
 
-const AUTH_STORAGE_KEY = "rl.auth.user";
-
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function deriveName(email: string) {
-  const localPart = email.split("@")[0] ?? email;
-  return localPart
-    .split(/[.\-_]+/)
-    .filter(Boolean)
-    .map((part) => part[0].toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Same SSR-safe pattern as ThemeProvider: start neutral on both server and
-  // client, then hydrate from localStorage once mounted. "loading" lets a
-  // route guard tell "not logged in yet" apart from "haven't checked yet".
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(AUTH_STORAGE_KEY);
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored) as AuthUser);
-        setStatus("authenticated");
-        return;
-      } catch {
-        window.localStorage.removeItem(AUTH_STORAGE_KEY);
-      }
+    // No refresh token at all means we've never logged in — skip the round
+    // trip and go straight to "unauthenticated" instead of hitting the API.
+    if (!getRefreshToken()) {
+      setStatus("unauthenticated");
+      return;
     }
-    setStatus("unauthenticated");
+
+    let ignore = false;
+
+    // fetchProfile() attaches whatever access token is stored (possibly
+    // none/expired); api-client transparently refreshes and retries once
+    // on a 401, so this single call covers both "still signed in" and
+    // "access token expired, refresh token still good".
+    fetchProfile()
+      .then((profile) => {
+        if (ignore) return;
+        setUser(profile);
+        setStatus("authenticated");
+      })
+      .catch(() => {
+        if (ignore) return;
+        clearTokens();
+        setUser(null);
+        setStatus("unauthenticated");
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  const login = useCallback((email: string) => {
-    const nextUser: AuthUser = { name: deriveName(email), email };
-    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextUser));
-    setUser(nextUser);
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await loginRequest(email, password);
+    setTokens(result.accessToken, result.refreshToken);
+    setUser(result.user);
     setStatus("authenticated");
   }, []);
 
   const logout = useCallback(() => {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    clearTokens();
     setUser(null);
     setStatus("unauthenticated");
   }, []);
 
-  // Memoized so toggling theme (AuthProvider's parent re-rendering) doesn't
-  // hand every useAuth() consumer a new object when auth state hasn't changed.
   const value = useMemo(
     () => ({ user, status, login, logout }),
     [user, status, login, logout]

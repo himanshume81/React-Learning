@@ -4,7 +4,7 @@ import { KPICard } from "@/components/molecules/KPICard";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
 import { RecentActivity } from "@/components/organisms/RecentActivity";
-import { fetchRecentActivity, fetchUserStats } from "@/lib/mock-users";
+import { fetchRecentActivity, fetchUserStats } from "@/lib/users-api";
 import type { Activity } from "@/types/activity";
 import { useEffect, useState } from "react";
 

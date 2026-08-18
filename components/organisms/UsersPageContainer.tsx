@@ -6,7 +6,7 @@ import { Pagination, type PageSize } from "@/components/molecules/Pagination";
 import { SearchFilterBar } from "@/components/molecules/SearchFilterBar";
 import { UserTable } from "@/components/organisms/UserTable";
 import { useDebounce } from "@/lib/hooks/use-debounce";
-import { deleteUser, fetchUsers } from "@/lib/mock-users";
+import { deleteUser, fetchUsers } from "@/lib/users-api";
 import type { User, UserStatus } from "@/types/user";
 import dynamic from "next/dynamic";
 import Link from "next/link";

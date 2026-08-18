@@ -4,7 +4,8 @@ import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
 import { FormField } from "@/components/molecules/FormField";
 import { SelectField } from "@/components/molecules/SelectField";
-import { userSchema, type UserFormValues } from "@/lib/validation/user-schema";
+import { ApiError } from "@/lib/api-client";
+import { createUserSchema, userSchema, type UserFormValues } from "@/lib/validation/user-schema";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -28,7 +29,9 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
     defaultValues: defaultValues ?? {
       name: "",
       email: "",
-      role: "viewer",
+      phoneNumber: "",
+      password: "",
+      role: "user",
       status: "active",
     },
   });
@@ -37,7 +40,8 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
     setFormError(null);
     clearErrors();
 
-    const result = userSchema.safeParse(data);
+    const schema = mode === "create" ? createUserSchema : userSchema;
+    const result = schema.safeParse(data);
     if (!result.success) {
       for (const issue of result.error.issues) {
         const field = issue.path[0] as keyof UserFormValues;
@@ -49,11 +53,12 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
     try {
       await onSubmit(result.data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Something went wrong";
-      if (message === "Email already in use") {
-        setError("email", { message });
+      if (error instanceof ApiError && error.status === 409) {
+        setError("email", { message: error.message });
+      } else if (error instanceof ApiError) {
+        setFormError(error.message);
       } else {
-        setFormError(message);
+        setFormError("Something went wrong. Please try again.");
       }
     }
   };
@@ -82,10 +87,29 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
           {...register("email")}
         />
 
+        <FormField
+          id="phoneNumber"
+          label="Phone number"
+          type="tel"
+          placeholder="+15551234567"
+          error={errors.phoneNumber?.message}
+          {...register("phoneNumber")}
+        />
+
+        {mode === "create" && (
+          <FormField
+            id="password"
+            label="Password"
+            type="password"
+            placeholder="At least 6 characters"
+            error={errors.password?.message}
+            {...register("password")}
+          />
+        )}
+
         <SelectField id="role" label="Role" error={errors.role?.message} {...register("role")}>
           <option value="admin">Admin</option>
-          <option value="editor">Editor</option>
-          <option value="viewer">Viewer</option>
+          <option value="user">User</option>
         </SelectField>
 
         <SelectField

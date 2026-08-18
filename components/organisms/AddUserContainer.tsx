@@ -2,7 +2,7 @@
 
 import { Text } from "@/components/atoms/Text";
 import { UserForm } from "@/components/organisms/UserForm";
-import { createUser } from "@/lib/mock-users";
+import { createUser } from "@/lib/users-api";
 import type { UserFormValues } from "@/lib/validation/user-schema";
 import { useRouter } from "next/navigation";
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/atoms/Button";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
 import { EmptyState } from "@/components/molecules/EmptyState";
-import { deleteUser, fetchUserById } from "@/lib/mock-users";
+import { deleteUser, fetchUserById } from "@/lib/users-api";
 import type { User } from "@/types/user";
 import dynamic from "next/dynamic";
 import Link from "next/link";

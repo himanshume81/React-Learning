@@ -4,6 +4,7 @@ import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
 import { FormField } from "@/components/molecules/FormField";
 import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/api-client";
 import {
   loginSchema,
   type LoginFormValues,
@@ -13,7 +14,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 export function LoginForm() {
-  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -31,7 +32,7 @@ export function LoginForm() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    setSubmitMessage(null);
+    setFormError(null);
     clearErrors();
 
     const result = loginSchema.safeParse(data);
@@ -43,12 +44,29 @@ export function LoginForm() {
       return;
     }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    setSubmitMessage(`Welcome back! Logged in as ${result.data.email}`);
-    login(result.data.email);
-    router.replace("/dashboard");
+    try {
+      await login(result.data.email, result.data.password);
+      router.replace("/dashboard");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setFormError("Incorrect email or password.");
+      } else if (error instanceof ApiError && error.status === 400) {
+        // Backend validation error, e.g. "email must be an email" — surface
+        // it against the field it names, falling back to the banner.
+        const message = error.message.toLowerCase();
+        if (message.includes("email")) {
+          setError("email", { message: error.message });
+        } else if (message.includes("password")) {
+          setError("password", { message: error.message });
+        } else {
+          setFormError(error.message);
+        }
+      } else if (error instanceof ApiError) {
+        setFormError(error.message);
+      } else {
+        setFormError("Something went wrong. Please try again.");
+      }
+    }
   };
 
   return (
@@ -88,12 +106,12 @@ export function LoginForm() {
         />
       </div>
 
-      {submitMessage && (
+      {formError && (
         <Text
-          className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300"
-          role="status"
+          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300"
+          role="alert"
         >
-          {submitMessage}
+          {formError}
         </Text>
       )}
 

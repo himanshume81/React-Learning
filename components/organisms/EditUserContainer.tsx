@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { UserForm } from "@/components/organisms/UserForm";
-import { fetchUserById, updateUser } from "@/lib/mock-users";
+import { fetchUserById, updateUser } from "@/lib/users-api";
 import type { UserFormValues } from "@/lib/validation/user-schema";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -26,6 +26,7 @@ export function EditUserContainer({ userId }: { userId: string }) {
         setDefaultValues({
           name: user.name,
           email: user.email,
+          phoneNumber: user.phoneNumber ?? "",
           role: user.role,
           status: user.status,
         });
