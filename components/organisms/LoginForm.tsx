@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/atoms/Button";
+import { Input } from "@/components/atoms/Input";
+import { Label } from "@/components/atoms/Label";
 import { Text } from "@/components/atoms/Text";
 import { FormField } from "@/components/molecules/FormField";
 import { useAuth } from "@/context/AuthContext";
@@ -9,14 +11,17 @@ import {
   loginSchema,
   type LoginFormValues,
 } from "@/lib/validation/login-schema";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 export function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resetSuccess = searchParams.get("reset") === "success";
 
   const {
     register,
@@ -95,16 +100,87 @@ export function LoginForm() {
           {...register("email")}
         />
 
-        <FormField
-          id="password"
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          autoComplete="current-password"
-          error={errors.password?.message}
-          {...register("password")}
-        />
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Password</Label>
+
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              hasError={Boolean(errors.password?.message)}
+              aria-invalid={Boolean(errors.password?.message)}
+              className="pr-10"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((current) => !current)}
+              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-zinc-500 transition-colors hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-foreground/20 dark:text-zinc-400 dark:hover:text-zinc-100"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? (
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M3 3l18 18" />
+                  <path d="M10.6 10.7a2 2 0 0 0 2.8 2.8" />
+                  <path d="M9.4 5.5A10.7 10.7 0 0 1 12 5c5 0 9.3 3 11 7-1 2.3-2.8 4.1-5 5.3" />
+                  <path d="M6.2 6.2C4.2 7.5 2.7 9.5 2 12c1.7 4 6 7 10 7 1.3 0 2.6-.3 3.8-.8" />
+                </svg>
+              ) : (
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {errors.password?.message && (
+            <Text className="text-sm text-red-600 dark:text-red-400" role="alert">
+              {errors.password.message}
+            </Text>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              onClick={() => router.push("/forgot-password")}
+            >
+              Forgot password?
+            </button>
+          </div>
+        </div>
       </div>
+
+      {resetSuccess && (
+        <Text
+          className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+          role="status"
+        >
+          Password reset successful. Sign in with your new password.
+        </Text>
+      )}
 
       {formError && (
         <Text

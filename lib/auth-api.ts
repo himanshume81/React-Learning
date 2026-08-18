@@ -15,6 +15,10 @@ export type LoginResult = {
   user: User;
 };
 
+type MessageResponse = {
+  message: string;
+};
+
 export async function login(email: string, password: string): Promise<LoginResult> {
   const data = await apiFetch<LoginResponse>("/auth/login", {
     method: "POST",
@@ -26,6 +30,24 @@ export async function login(email: string, password: string): Promise<LoginResul
     refreshToken: data.refreshToken,
     user: toUser(data.user),
   };
+}
+
+export async function forgotPassword(email: string): Promise<string> {
+  const data = await apiFetch<MessageResponse>("/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+
+  return data.message;
+}
+
+export async function resetPassword(token: string, password: string): Promise<string> {
+  const data = await apiFetch<MessageResponse>("/auth/reset-password", {
+    method: "POST",
+    body: { token, password },
+  });
+
+  return data.message;
 }
 
 export async function fetchProfile(): Promise<User> {
