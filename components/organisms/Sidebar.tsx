@@ -7,7 +7,9 @@ import { useEffect } from "react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/users", label: "Users" }
+  { href: "/users", label: "Users" },
+  { href: "/categories", label: "Categories" },
+  { href: "/products", label: "Products" },
 ];
 
 function isActive(pathname: string, href: string) {

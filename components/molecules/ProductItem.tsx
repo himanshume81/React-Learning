@@ -23,7 +23,7 @@ export function ProductItem({ product }: ProductItemProps) {
           {product.description}
         </Text>
         <Text className="mt-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-          {product.category}
+          {product.categoryName}
         </Text>
       </div>
       <Text className="shrink-0 text-sm font-semibold">
