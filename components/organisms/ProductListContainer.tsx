@@ -18,6 +18,7 @@ import {
   formatRecordId,
   updateProduct,
 } from "@/lib/catalog-api";
+import { useToast } from "@/context/ToastContext";
 import type { Category } from "@/types/category";
 import type { Product, ProductInput } from "@/types/product";
 import Link from "next/link";
@@ -79,6 +80,7 @@ function validateProduct(input: ProductInput): FormErrors {
 }
 
 export function ProductListContainer() {
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
@@ -158,8 +160,10 @@ export function ProductListContainer() {
     try {
       if (editingProduct) {
         await updateProduct(editingProduct.id, form);
+        showToast("Product updated successfully.");
       } else {
         await createProduct(form);
+        showToast("Product created successfully.");
       }
 
       await Promise.all([refreshCategories(), refreshProducts()]);
@@ -167,6 +171,7 @@ export function ProductListContainer() {
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors({ name: error.message });
+        showToast(error.message, "error");
       }
     } finally {
       setIsSubmitting(false);
@@ -178,16 +183,33 @@ export function ProductListContainer() {
       return;
     }
 
-    await deleteProduct(deleteTarget.id);
-    setDeleteTarget(null);
-    await Promise.all([refreshCategories(), refreshProducts()]);
+    try {
+      await deleteProduct(deleteTarget.id);
+      showToast("Product deleted successfully.");
+      setDeleteTarget(null);
+      await Promise.all([refreshCategories(), refreshProducts()]);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, "error");
+      }
+    }
   }
 
   async function handleToggleStatus(product: Product) {
-    await updateProduct(product.id, {
-      status: product.status === "active" ? "inactive" : "active",
-    });
-    await refreshProducts();
+    try {
+      const nextStatus = product.status === "active" ? "inactive" : "active";
+      await updateProduct(product.id, {
+        status: nextStatus,
+      });
+      showToast(
+        `Product ${nextStatus === "active" ? "activated" : "deactivated"} successfully.`
+      );
+      await refreshProducts();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, "error");
+      }
+    }
   }
 
   return (
@@ -244,7 +266,85 @@ export function ProductListContainer() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <>
+          <div className="space-y-3 md:hidden">
+            {isLoading ? (
+              <div className="rounded-xl border border-zinc-200 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
+                Loading products...
+              </div>
+            ) : (
+              products.map((product) => (
+                <article
+                  key={product.id}
+                  className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/products/${product.id}`}
+                        className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        {formatRecordId("PRD", product.id)}
+                      </Link>
+                      <Text className="mt-2 font-medium">{product.name}</Text>
+                      <Text className="mt-1 text-sm text-zinc-500">
+                        {product.sku}
+                      </Text>
+                    </div>
+                    <ActionMenu label={`Actions for ${product.name}`}>
+                      <Link
+                        href={`/products/${product.id}`}
+                        role="menuitem"
+                        className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                      >
+                        View
+                      </Link>
+                      <ActionMenuItem onSelect={() => openEditModal(product)}>
+                        Edit
+                      </ActionMenuItem>
+                      <ActionMenuItem onSelect={() => handleToggleStatus(product)}>
+                        {product.status === "active" ? "Deactivate" : "Activate"}
+                      </ActionMenuItem>
+                      <ActionMenuItem
+                        tone="danger"
+                        onSelect={() => setDeleteTarget(product)}
+                      >
+                        Delete
+                      </ActionMenuItem>
+                    </ActionMenu>
+                  </div>
+
+                  <Text className="mt-3 text-sm text-zinc-500">
+                    {product.description}
+                  </Text>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Badge tone="info">{product.categoryName}</Badge>
+                    <Badge
+                      tone={product.status === "active" ? "success" : "neutral"}
+                    >
+                      {product.status}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <Text className="text-zinc-500">Price</Text>
+                      <Text className="mt-1 font-medium">
+                        {formatPrice(product.price)}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text className="text-zinc-500">Stock</Text>
+                      <Text className="mt-1 font-medium">{product.stock}</Text>
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-xl border border-zinc-200 md:block dark:border-zinc-800">
           <table className="w-full min-w-[1100px] text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
@@ -336,7 +436,8 @@ export function ProductListContainer() {
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {products.length > 0 && !isLoading ? (

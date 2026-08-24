@@ -12,6 +12,7 @@ import {
   formatRecordId,
   updateCategory,
 } from "@/lib/catalog-api";
+import { useToast } from "@/context/ToastContext";
 import { ActionMenu, ActionMenuItem } from "@/components/molecules/ActionMenu";
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/molecules/EmptyState";
@@ -43,6 +44,7 @@ function validateCategory(input: CategoryInput): FormErrors {
 }
 
 export function CategoryManagementContainer() {
+  const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -105,8 +107,10 @@ export function CategoryManagementContainer() {
     try {
       if (editingCategory) {
         await updateCategory(editingCategory.id, form);
+        showToast("Category updated successfully.");
       } else {
         await createCategory(form);
+        showToast("Category created successfully.");
       }
 
       await refreshCategories();
@@ -114,6 +118,7 @@ export function CategoryManagementContainer() {
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors({ name: error.message });
+        showToast(error.message, "error");
       }
     } finally {
       setIsSubmitting(false);
@@ -127,21 +132,33 @@ export function CategoryManagementContainer() {
 
     try {
       await deleteCategory(deleteTarget.id);
+      showToast("Category deleted successfully.");
       setDeleteTarget(null);
       setDeleteError("");
       await refreshCategories();
     } catch (error) {
       if (error instanceof ApiError) {
         setDeleteError(error.message);
+        showToast(error.message, "error");
       }
     }
   }
 
   async function handleToggleStatus(category: Category) {
-    await updateCategory(category.id, {
-      status: category.status === "active" ? "inactive" : "active",
-    });
-    await refreshCategories();
+    try {
+      const nextStatus = category.status === "active" ? "inactive" : "active";
+      await updateCategory(category.id, {
+        status: nextStatus,
+      });
+      showToast(
+        `Category ${nextStatus === "active" ? "activated" : "deactivated"} successfully.`
+      );
+      await refreshCategories();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        showToast(error.message, "error");
+      }
+    }
   }
 
   return (
@@ -165,7 +182,77 @@ export function CategoryManagementContainer() {
           action={<Button onClick={openCreateModal}>Create first category</Button>}
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <>
+          <div className="space-y-3 md:hidden">
+            {isLoading ? (
+              <div className="rounded-xl border border-zinc-200 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
+                Loading categories...
+              </div>
+            ) : (
+              categories.map((category) => (
+                <article
+                  key={category.id}
+                  className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/categories/${category.id}`}
+                        className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        {formatRecordId("CAT", category.id)}
+                      </Link>
+                      <Text className="mt-2 font-medium">{category.name}</Text>
+                      <Text className="mt-1 text-sm text-zinc-500">
+                        {category.slug}
+                      </Text>
+                    </div>
+                    <ActionMenu label={`Actions for ${category.name}`}>
+                      <Link
+                        href={`/categories/${category.id}`}
+                        role="menuitem"
+                        className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                      >
+                        View
+                      </Link>
+                      <ActionMenuItem onSelect={() => openEditModal(category)}>
+                        Edit
+                      </ActionMenuItem>
+                      <ActionMenuItem onSelect={() => handleToggleStatus(category)}>
+                        {category.status === "active" ? "Deactivate" : "Activate"}
+                      </ActionMenuItem>
+                      <ActionMenuItem
+                        tone="danger"
+                        onSelect={() => setDeleteTarget(category)}
+                      >
+                        Delete
+                      </ActionMenuItem>
+                    </ActionMenu>
+                  </div>
+
+                  {category.description ? (
+                    <Text className="mt-3 text-sm text-zinc-500">
+                      {category.description}
+                    </Text>
+                  ) : null}
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Badge
+                      tone={category.status === "active" ? "success" : "neutral"}
+                    >
+                      {category.status}
+                    </Badge>
+                    <Badge tone="info">
+                      {category.productCount ?? 0} product
+                      {(category.productCount ?? 0) === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-xl border border-zinc-200 md:block dark:border-zinc-800">
           <table className="w-full min-w-[720px] text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
@@ -249,7 +336,8 @@ export function CategoryManagementContainer() {
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <Modal
