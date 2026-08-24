@@ -2,7 +2,7 @@
 
 import { fetchProfile, login as loginRequest } from "@/lib/auth-api";
 import { clearTokens, getRefreshToken, setTokens } from "@/lib/auth-tokens";
-import type { User } from "@/types/user";
+import type { User, UserRole } from "@/types/user";
 import {
   createContext,
   useCallback,
@@ -20,7 +20,7 @@ export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 type AuthContextValue = {
   user: AuthUser | null;
   status: AuthStatus;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, userType: UserRole) => Promise<void>;
   logout: () => void;
 };
 
@@ -62,8 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const result = await loginRequest(email, password);
+  const login = useCallback(async (email: string, password: string, userType: UserRole) => {
+    const result = await loginRequest(email, password, userType);
     setTokens(result.accessToken, result.refreshToken);
     setUser(result.user);
     setStatus("authenticated");

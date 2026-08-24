@@ -2,6 +2,7 @@ import { apiFetch } from "@/lib/api-client";
 import type { RawUser } from "@/lib/users-api";
 import { toUser } from "@/lib/users-api";
 import type { User } from "@/types/user";
+import type { UserRole } from "@/types/user";
 
 type LoginResponse = {
   accessToken: string;
@@ -19,10 +20,14 @@ type MessageResponse = {
   message: string;
 };
 
-export async function login(email: string, password: string): Promise<LoginResult> {
+export async function login(
+  email: string,
+  password: string,
+  userType: UserRole
+): Promise<LoginResult> {
   const data = await apiFetch<LoginResponse>("/auth/login", {
     method: "POST",
-    body: { email, password },
+    body: { email, password, userType },
   });
 
   return {

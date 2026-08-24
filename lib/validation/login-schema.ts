@@ -5,6 +5,9 @@ export const loginSchema = z.object({
     .string()
     .min(1, "Email is required")
     .email("Enter a valid email address"),
+  userType: z.enum(["admin", "user"], {
+    errorMap: () => ({ message: "Select a user type" }),
+  }),
   password: z
     .string()
     .min(1, "Password is required")

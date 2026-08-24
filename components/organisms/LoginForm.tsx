@@ -33,6 +33,7 @@ export function LoginForm() {
   } = useForm<LoginFormValues>({
     defaultValues: {
       email: "",
+      userType: "user",
       password: "",
     },
   });
@@ -51,7 +52,7 @@ export function LoginForm() {
     }
 
     try {
-      await login(result.data.email, result.data.password);
+      await login(result.data.email, result.data.password, result.data.userType);
       router.replace("/dashboard");
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -100,6 +101,8 @@ export function LoginForm() {
           error={errors.email?.message}
           {...register("email")}
         />
+
+        <input type="hidden" value="admin" {...register("userType")} />
 
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
