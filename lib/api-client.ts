@@ -1,10 +1,10 @@
 import { clearTokens, getAccessToken, getRefreshToken, setAccessToken } from "@/lib/auth-tokens";
 
-// Always goes through the same-origin proxy (see next.config.ts), which
-// forwards to the real backend server-side — the backend itself sends no
-// CORS headers, so a direct browser request to it would be blocked.
-// NEXT_PUBLIC_API_BASE_URL configures where that proxy points, not this.
-const API_BASE_URL = "/api/proxy";
+// Frontend requests use the public env var directly so the real backend URL
+// is visible in the browser's Network tab.
+const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:9000"
+).replace(/\/$/, "");
 
 export class ApiError extends Error {
   status: number;
