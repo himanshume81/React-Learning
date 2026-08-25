@@ -86,7 +86,7 @@ export function LoginForm() {
 
       <div className="space-y-1">
         <Text as="h1" className="text-2xl font-semibold">
-          Sign in
+          Sign insd
         </Text>
         <Text className="text-sm text-zinc-600 dark:text-zinc-400">
           Enter your email and password to continue.
