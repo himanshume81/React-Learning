@@ -40,7 +40,6 @@ export function DashboardOverview() {
   return (
     <section className="space-y-6">
       <div>
-        <pre>{process.env.NEXT_PUBLIC_API_BASE_URL}</pre>
         <Text as="h1" className="text-2xl font-semibold">
           Dashboard
         </Text>
