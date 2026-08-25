@@ -10,6 +10,7 @@ const links = [
   { href: "/users", label: "Users" },
   { href: "/categories", label: "Categories" },
   { href: "/products", label: "Products" },
+  { href: "/orders", label: "Orders" },
 ];
 
 function isActive(pathname: string, href: string) {

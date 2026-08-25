@@ -123,14 +123,14 @@ function normalizeProductListResponse(payload: ProductListResponse): RawProduct[
 }
 
 export async function fetchCategories(): Promise<Category[]> {
-  const rawCategories = await apiFetch<RawCategory[]>("/categories");
+  const rawCategories = await apiFetch<RawCategory[]>("/categories", { auth: true });
   return rawCategories.map((category) => toCategory(category));
 }
 
 export async function fetchCategoriesWithCounts(): Promise<Category[]> {
   const [rawCategories, rawProducts] = await Promise.all([
-    apiFetch<RawCategory[]>("/categories"),
-    apiFetch<ProductListResponse>("/products")
+    apiFetch<RawCategory[]>("/categories", { auth: true }),
+    apiFetch<ProductListResponse>("/products", { auth: true })
       .then(normalizeProductListResponse)
       .catch(() => []),
   ]);
@@ -152,8 +152,8 @@ export async function fetchCategoriesWithCounts(): Promise<Category[]> {
 export async function fetchCategoryById(id: string): Promise<Category | null> {
   try {
     const [rawCategory, rawProducts] = await Promise.all([
-      apiFetch<RawCategory>(`/categories/${id}`),
-      apiFetch<ProductListResponse>("/products")
+      apiFetch<RawCategory>(`/categories/${id}`, { auth: true }),
+      apiFetch<ProductListResponse>("/products", { auth: true })
         .then(normalizeProductListResponse)
         .catch(() => []),
     ]);
@@ -176,6 +176,7 @@ export async function createCategory(input: CategoryInput): Promise<Category> {
       slug: input.slug.trim(),
       description: input.description.trim(),
     },
+    auth: true,
   });
 
   return toCategory(raw, 0);
@@ -206,6 +207,7 @@ export async function updateCategory(
   const raw = await apiFetch<RawCategory>(`/categories/${id}`, {
     method: "PATCH",
     body,
+    auth: true,
   });
 
   return toCategory(raw);
@@ -214,13 +216,15 @@ export async function updateCategory(
 export async function deleteCategory(id: string): Promise<void> {
   await apiFetch<void>(`/categories/${id}`, {
     method: "DELETE",
+    auth: true,
   });
 }
 
 export async function fetchProducts(categoryId?: string): Promise<Product[]> {
   const [rawProducts, categories] = await Promise.all([
     apiFetch<ProductListResponse>(
-      categoryId ? `/products?categoryId=${encodeURIComponent(categoryId)}` : "/products"
+      categoryId ? `/products?categoryId=${encodeURIComponent(categoryId)}` : "/products",
+      { auth: true }
     ).then(normalizeProductListResponse),
     fetchCategories(),
   ]);
@@ -231,7 +235,7 @@ export async function fetchProducts(categoryId?: string): Promise<Product[]> {
 export async function fetchProductById(id: string): Promise<Product | null> {
   try {
     const [rawProduct, categories] = await Promise.all([
-      apiFetch<RawProduct>(`/products/${id}`),
+      apiFetch<RawProduct>(`/products/${id}`, { auth: true }),
       fetchCategories(),
     ]);
 
@@ -253,6 +257,7 @@ export async function createProduct(input: ProductInput): Promise<Product> {
       categoryId: Number(input.categoryId),
       status: "ACTIVE",
     },
+    auth: true,
   });
 
   const categories = await fetchCategories();
@@ -296,6 +301,7 @@ export async function updateProduct(
   const raw = await apiFetch<RawProduct>(`/products/${id}`, {
     method: "PATCH",
     body,
+    auth: true,
   });
 
   const categories = await fetchCategories();
@@ -305,5 +311,6 @@ export async function updateProduct(
 export async function deleteProduct(id: string): Promise<void> {
   await apiFetch<void>(`/products/${id}`, {
     method: "DELETE",
+    auth: true,
   });
 }

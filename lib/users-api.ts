@@ -57,7 +57,7 @@ export type PaginatedUsers = {
 // The backend only exposes a flat GET /users with no query params, so
 // search/status/pagination are all applied client-side over the full list.
 async function fetchAllUsers(): Promise<User[]> {
-  const raw = await apiFetch<RawUser[]>("/users");
+  const raw = await apiFetch<RawUser[]>("/users", { auth: true });
   return raw.map(toUser);
 }
 
@@ -121,6 +121,7 @@ export async function createUser(input: UserInput): Promise<User> {
   const raw = await apiFetch<RawUser>("/users", {
     method: "POST",
     body: normalize(input),
+    auth: true,
   });
   const user = toUser(raw);
   logActivity("created", user.name);
@@ -131,6 +132,7 @@ export async function updateUser(id: string, input: Partial<UserInput>): Promise
   const raw = await apiFetch<RawUser>(`/users/${id}`, {
     method: "PATCH",
     body: normalize(input),
+    auth: true,
   });
   const user = toUser(raw);
   logActivity("updated", user.name);
@@ -139,7 +141,7 @@ export async function updateUser(id: string, input: Partial<UserInput>): Promise
 
 export async function deleteUser(id: string): Promise<void> {
   const user = await fetchUserById(id);
-  await apiFetch<void>(`/users/${id}`, { method: "DELETE" });
+  await apiFetch<void>(`/users/${id}`, { method: "DELETE", auth: true });
   if (user) {
     logActivity("deleted", user.name);
   }

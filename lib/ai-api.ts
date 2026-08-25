@@ -22,5 +22,6 @@ export async function sendAiChatMessage({ messages }: AiChatRequest): Promise<Ai
     body: {
       messages,
     },
+    auth: true,
   });
 }
