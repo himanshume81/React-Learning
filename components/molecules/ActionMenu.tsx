@@ -45,9 +45,9 @@ export function ActionMenu({ label, children }: ActionMenuProps) {
         aria-expanded={open}
         aria-label={label}
         onClick={() => setOpen((current) => !current)}
-        className="rounded-lg px-3 py-1.5 text-lg leading-none transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-xl leading-none text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
       >
-        ...
+        <span aria-hidden>⋮</span>
       </button>
 
       {open ? (

@@ -16,6 +16,8 @@ type RawProduct = {
   id: number | string;
   name: string;
   description?: string | null;
+  image?: string | null;
+  imageUrl?: string | null;
   sku?: string | null;
   price: number | string;
   stock?: number | string | null;
@@ -91,6 +93,7 @@ function toProduct(raw: RawProduct, categories: Category[]): Product {
     id: String(raw.id),
     name: raw.name,
     description: raw.description ?? "",
+    imageUrl: raw.imageUrl ?? raw.image ?? "",
     sku: raw.sku ?? "",
     price: Number(raw.price),
     stock: Number(raw.stock ?? 0),
@@ -249,12 +252,13 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   const raw = await apiFetch<RawProduct>("/products", {
     method: "POST",
     body: {
+      categoryId: Number(input.categoryId),
       name: input.name.trim(),
       description: input.description.trim(),
+      image: input.imageUrl.trim() || undefined,
       sku: input.sku.trim(),
       price: input.price,
       stock: input.stock,
-      categoryId: Number(input.categoryId),
       status: "ACTIVE",
     },
     auth: true,
@@ -276,6 +280,10 @@ export async function updateProduct(
 
   if (input.description !== undefined) {
     body.description = input.description.trim();
+  }
+
+  if (input.imageUrl !== undefined) {
+    body.image = input.imageUrl.trim() || undefined;
   }
 
   if (input.sku !== undefined) {

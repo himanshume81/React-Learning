@@ -1,16 +1,24 @@
 "use client";
 
-import { NavLink } from "@/components/molecules/NavLink";
 import { Text } from "@/components/atoms/Text";
+import { useAuth } from "@/context/AuthContext";
+import { NavLink } from "@/components/molecules/NavLink";
+import type { UserRole } from "@/types/user";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-const links = [
+const links: Array<{
+  href: string;
+  label: string;
+  roles?: UserRole[];
+}> = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/users", label: "Users" },
+  { href: "/users", label: "Users", roles: ["admin"] },
+  { href: "/customers", label: "Customers" },
   { href: "/categories", label: "Categories" },
   { href: "/products", label: "Products" },
   { href: "/orders", label: "Orders" },
+  { href: "/banners", label: "Banners" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -23,9 +31,23 @@ type SidebarNavProps = {
 };
 
 function SidebarNav({ pathname, onNavigate }: SidebarNavProps) {
+  const { user, status } = useAuth();
+
+  const visibleLinks = links.filter((link) => {
+    if (!link.roles) {
+      return true;
+    }
+
+    if (status !== "authenticated" || !user) {
+      return false;
+    }
+
+    return link.roles.includes(user.role);
+  });
+
   return (
     <nav className="flex flex-col gap-1" onClick={onNavigate}>
-      {links.map((link) => (
+      {visibleLinks.map((link) => (
         <NavLink
           key={link.href}
           href={link.href}

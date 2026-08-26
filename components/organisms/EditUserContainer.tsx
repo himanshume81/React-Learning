@@ -27,7 +27,7 @@ export function EditUserContainer({ userId }: { userId: string }) {
           name: user.name,
           email: user.email,
           phoneNumber: user.phoneNumber ?? "",
-          role: user.role,
+          role: "admin",
           status: user.status,
         });
       }
@@ -40,7 +40,10 @@ export function EditUserContainer({ userId }: { userId: string }) {
   }, [userId]);
 
   const handleSubmit = async (values: UserFormValues) => {
-    await updateUser(userId, values);
+    await updateUser(userId, {
+      ...values,
+      role: "admin",
+    });
     router.push(`/users/${userId}`);
   };
 

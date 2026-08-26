@@ -3,6 +3,7 @@
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
+import { Skeleton } from "@/components/atoms/Skeleton";
 import { Select } from "@/components/atoms/Select";
 import { Text } from "@/components/atoms/Text";
 import { ActionMenu, ActionMenuItem } from "@/components/molecules/ActionMenu";
@@ -27,6 +28,7 @@ import { useEffect, useState } from "react";
 const emptyForm: ProductInput = {
   name: "",
   description: "",
+  imageUrl: "",
   sku: "",
   price: 0,
   stock: 0,
@@ -36,6 +38,7 @@ const emptyForm: ProductInput = {
 type FormErrors = {
   name?: string;
   description?: string;
+  imageUrl?: string;
   sku?: string;
   price?: string;
   stock?: string;
@@ -132,6 +135,7 @@ export function ProductListContainer() {
     setForm({
       name: product.name,
       description: product.description,
+      imageUrl: product.imageUrl,
       sku: product.sku,
       price: product.price,
       stock: product.stock,
@@ -269,9 +273,26 @@ export function ProductListContainer() {
         <>
           <div className="space-y-3 md:hidden">
             {isLoading ? (
-              <div className="rounded-xl border border-zinc-200 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
-                Loading products...
-              </div>
+              Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="mt-3 h-5 w-40" />
+                  <Skeleton className="mt-2 h-4 w-28" />
+                  <Skeleton className="mt-4 h-4 w-full" />
+                  <Skeleton className="mt-2 h-4 w-5/6" />
+                  <div className="mt-4 flex gap-2">
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+              ))
             ) : (
               products.map((product) => (
                 <article
@@ -318,6 +339,14 @@ export function ProductListContainer() {
                     {product.description}
                   </Text>
 
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="mt-4 h-40 w-full rounded-xl bg-zinc-100 object-cover dark:bg-zinc-900"
+                    />
+                  ) : null}
+
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     <Badge tone="info">{product.categoryName}</Badge>
                     <Badge
@@ -360,11 +389,38 @@ export function ProductListContainer() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-zinc-500">
-                    Loading products...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }, (_, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-zinc-200 last:border-0 dark:border-zinc-800"
+                  >
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-20" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="mt-2 h-4 w-64" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-10" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-8 w-10 rounded-lg" />
+                    </td>
+                  </tr>
+                ))
               ) : (
                 products.map((product) => (
                   <tr
@@ -380,11 +436,20 @@ export function ProductListContainer() {
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="min-w-0">
+                      <div className="flex items-start gap-4">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-14 w-20 shrink-0 rounded-lg bg-zinc-100 object-cover dark:bg-zinc-900"
+                          />
+                        ) : null}
+                        <div className="min-w-0">
                         <Text className="font-medium">{product.name}</Text>
                         <Text className="max-w-md text-sm text-zinc-500">
                           {product.description}
                         </Text>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -597,6 +662,36 @@ export function ProductListContainer() {
               <Text className="text-sm text-red-600 dark:text-red-400">
                 {errors.description}
               </Text>
+            ) : null}
+          </div>
+
+          <div className="space-y-1.5">
+            <Text as="span" className="text-sm font-medium">
+              Image URL
+            </Text>
+            <Input
+              type="url"
+              value={form.imageUrl}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  imageUrl: event.target.value,
+                }))
+              }
+              placeholder="https://res.cloudinary.com/your-cloud/image/upload/v123/products/iphone15.jpg"
+              hasError={Boolean(errors.imageUrl)}
+            />
+            {errors.imageUrl ? (
+              <Text className="text-sm text-red-600 dark:text-red-400">
+                {errors.imageUrl}
+              </Text>
+            ) : null}
+            {form.imageUrl ? (
+              <img
+                src={form.imageUrl}
+                alt="Product preview"
+                className="h-40 w-full rounded-xl bg-zinc-100 object-cover dark:bg-zinc-900"
+              />
             ) : null}
           </div>
 

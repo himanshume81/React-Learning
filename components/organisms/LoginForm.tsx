@@ -11,6 +11,7 @@ import {
   loginSchema,
   type LoginFormValues,
 } from "@/lib/validation/login-schema";
+import { USER_ROLES } from "@/types/user";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -33,7 +34,7 @@ export function LoginForm() {
   } = useForm<LoginFormValues>({
     defaultValues: {
       email: "",
-      userType: "user",
+      userType: USER_ROLES.ADMIN,
       password: "",
     },
   });
@@ -102,7 +103,7 @@ export function LoginForm() {
           {...register("email")}
         />
 
-        <input type="hidden" value="admin" {...register("userType")} />
+        <input type="hidden" value={USER_ROLES.ADMIN} {...register("userType")} />
 
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>

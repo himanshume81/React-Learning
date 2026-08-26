@@ -1,7 +1,7 @@
 import { Avatar } from "@/components/atoms/Avatar";
 import { Badge } from "@/components/atoms/Badge";
-import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
+import { ActionMenu, ActionMenuItem } from "@/components/molecules/ActionMenu";
 import type { User } from "@/types/user";
 import Link from "next/link";
 
@@ -42,22 +42,26 @@ export function UserRow({ user, onDelete }: UserRowProps) {
         <Text className="text-sm text-zinc-500">{formatDate(user.joinedAt)}</Text>
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/users/${user.id}`}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
-          >
-            View
-          </Link>
-          <Link
-            href={`/users/${user.id}/edit`}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
-          >
-            Edit
-          </Link>
-          <Button variant="ghost" onClick={() => onDelete(user)}>
-            Delete
-          </Button>
+        <div className="flex items-center">
+          <ActionMenu label={`Actions for ${user.name}`}>
+            <Link
+              href={`/users/${user.id}`}
+              role="menuitem"
+              className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            >
+              View
+            </Link>
+            <Link
+              href={`/users/${user.id}/edit`}
+              role="menuitem"
+              className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            >
+              Edit
+            </Link>
+            <ActionMenuItem tone="danger" onSelect={() => onDelete(user)}>
+              Delete
+            </ActionMenuItem>
+          </ActionMenu>
         </div>
       </td>
     </tr>

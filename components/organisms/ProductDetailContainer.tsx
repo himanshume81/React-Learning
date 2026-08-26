@@ -70,6 +70,13 @@ export function ProductDetailContainer({ productId }: { productId: string }) {
         </Text>
 
         <div className="mt-6 space-y-4">
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-56 w-full rounded-xl bg-zinc-100 object-cover dark:bg-zinc-900"
+            />
+          ) : null}
           <div>
             <Text className="text-sm font-medium text-zinc-500">Name</Text>
             <Text className="mt-1 text-base">{product.name}</Text>

@@ -4,6 +4,7 @@ export type Product = {
   id: string;
   name: string;
   description: string;
+  imageUrl: string;
   sku: string;
   price: number;
   stock: number;
@@ -15,6 +16,7 @@ export type Product = {
 export type ProductInput = {
   name: string;
   description: string;
+  imageUrl: string;
   sku: string;
   price: number;
   stock: number;
