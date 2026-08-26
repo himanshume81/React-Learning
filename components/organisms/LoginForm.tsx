@@ -82,11 +82,9 @@ export function LoginForm() {
       className="w-full max-w-md space-y-6 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
       noValidate
     >
-      <pre>url :: {process.env.NEXT_PUBLIC_API_BASE_URL}</pre>
-
       <div className="space-y-1">
         <Text as="h1" className="text-2xl font-semibold">
-          Sign insd
+          Sign in
         </Text>
         <Text className="text-sm text-zinc-600 dark:text-zinc-400">
           Enter your email and password to continue.
