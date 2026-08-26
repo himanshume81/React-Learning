@@ -15,20 +15,22 @@ import {
   createProduct,
   deleteProduct,
   fetchCategories,
+  fetchProductById,
   fetchProducts,
   formatRecordId,
+  uploadProductImages,
   updateProduct,
 } from "@/lib/catalog-api";
 import { useToast } from "@/context/ToastContext";
 import type { Category } from "@/types/category";
 import type { Product, ProductInput } from "@/types/product";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 const emptyForm: ProductInput = {
   name: "",
   description: "",
-  imageUrl: "",
+  imageUrls: [],
   sku: "",
   price: 0,
   stock: 0,
@@ -38,11 +40,17 @@ const emptyForm: ProductInput = {
 type FormErrors = {
   name?: string;
   description?: string;
-  imageUrl?: string;
+  imageUrls?: string;
   sku?: string;
   price?: string;
   stock?: string;
   categoryId?: string;
+};
+
+type PendingImage = {
+  id: string;
+  file: File;
+  previewUrl: string;
 };
 
 function formatPrice(price: number) {
@@ -84,16 +92,37 @@ function validateProduct(input: ProductInput): FormErrors {
 
 export function ProductListContainer() {
   const { showToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditLoading, setIsEditLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductInput>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+
+  function readFileAsDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error("Could not read product image."));
+      };
+
+      reader.onerror = () => reject(new Error("Could not read product image."));
+      reader.readAsDataURL(file);
+    });
+  }
 
   async function refreshCategories() {
     setCategories(await fetchCategories());
@@ -122,6 +151,7 @@ export function ProductListContainer() {
   function openCreateModal() {
     setEditingProduct(null);
     setErrors({});
+    setPendingImages([]);
     setForm({
       ...emptyForm,
       categoryId: categories[0]?.id ?? "",
@@ -129,19 +159,40 @@ export function ProductListContainer() {
     setIsModalOpen(true);
   }
 
-  function openEditModal(product: Product) {
-    setEditingProduct(product);
+  async function openEditModal(product: Product) {
+    setIsEditLoading(true);
     setErrors({});
-    setForm({
-      name: product.name,
-      description: product.description,
-      imageUrl: product.imageUrl,
-      sku: product.sku,
-      price: product.price,
-      stock: product.stock,
-      categoryId: product.categoryId,
-    });
-    setIsModalOpen(true);
+
+    try {
+      const latestProduct = await fetchProductById(product.id);
+
+      if (!latestProduct) {
+        showToast("Product details could not be loaded.", "error");
+        return;
+      }
+
+      setEditingProduct(latestProduct);
+      setPendingImages([]);
+      setForm({
+        name: latestProduct.name,
+        description: latestProduct.description,
+        imageUrls: latestProduct.imageUrls,
+        sku: latestProduct.sku,
+        price: latestProduct.price,
+        stock: latestProduct.stock,
+        categoryId: latestProduct.categoryId,
+      });
+      setIsModalOpen(true);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Product details could not be loaded.",
+        "error"
+      );
+    } finally {
+      setIsEditLoading(false);
+    }
   }
 
   function closeModal() {
@@ -149,6 +200,56 @@ export function ProductListContainer() {
     setEditingProduct(null);
     setForm(emptyForm);
     setErrors({});
+    setPendingImages([]);
+  }
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    if (files.some((file) => !file.type.startsWith("image/"))) {
+      setErrors({ imageUrls: "Please choose image files for the product." });
+      return;
+    }
+
+    try {
+      const preparedImages = await Promise.all(
+        files.map(async (file, index) => ({
+          id: `${Date.now()}-${index}-${file.name}`,
+          file,
+          previewUrl: await readFileAsDataUrl(file),
+        }))
+      );
+      setPendingImages((current) => [...current, ...preparedImages]);
+      setErrors((current) => ({ ...current, imageUrls: undefined }));
+    } catch (error) {
+      setErrors({
+        imageUrls:
+          error instanceof Error ? error.message : "Could not prepare the product image.",
+      });
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function triggerUpload() {
+    fileInputRef.current?.click();
+  }
+
+  function removeExistingImage(index: number) {
+    setForm((current) => ({
+      ...current,
+      imageUrls: current.imageUrls.filter((_, currentIndex) => currentIndex !== index),
+    }));
+    setErrors((current) => ({ ...current, imageUrls: undefined }));
+  }
+
+  function removePendingImage(id: string) {
+    setPendingImages((current) => current.filter((image) => image.id !== id));
+    setErrors((current) => ({ ...current, imageUrls: undefined }));
   }
 
   async function handleSubmit() {
@@ -162,11 +263,31 @@ export function ProductListContainer() {
     setIsSubmitting(true);
 
     try {
+      let imageUrls = form.imageUrls;
+
+      if (pendingImages.length > 0) {
+        const uploadedImages = await uploadProductImages(
+          pendingImages.map((image) => image.file)
+        );
+
+        if (uploadedImages.length !== pendingImages.length) {
+          throw new Error("One or more product images could not be uploaded.");
+        }
+
+        imageUrls = [...form.imageUrls, ...uploadedImages];
+      }
+
       if (editingProduct) {
-        await updateProduct(editingProduct.id, form);
+        await updateProduct(editingProduct.id, {
+          ...form,
+          imageUrls,
+        });
         showToast("Product updated successfully.");
       } else {
-        await createProduct(form);
+        await createProduct({
+          ...form,
+          imageUrls,
+        });
         showToast("Product created successfully.");
       }
 
@@ -175,6 +296,9 @@ export function ProductListContainer() {
     } catch (error) {
       if (error instanceof ApiError) {
         setErrors({ name: error.message });
+        showToast(error.message, "error");
+      } else if (error instanceof Error) {
+        setErrors({ imageUrls: error.message });
         showToast(error.message, "error");
       }
     } finally {
@@ -218,6 +342,15 @@ export function ProductListContainer() {
 
   return (
     <section className="space-y-6">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <Text as="h1" className="text-2xl font-semibold">
@@ -320,7 +453,7 @@ export function ProductListContainer() {
                       >
                         View
                       </Link>
-                      <ActionMenuItem onSelect={() => openEditModal(product)}>
+                      <ActionMenuItem onSelect={() => void openEditModal(product)}>
                         Edit
                       </ActionMenuItem>
                       <ActionMenuItem onSelect={() => handleToggleStatus(product)}>
@@ -339,12 +472,19 @@ export function ProductListContainer() {
                     {product.description}
                   </Text>
 
-                  {product.imageUrl ? (
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="mt-4 h-40 w-full rounded-xl bg-zinc-100 object-cover dark:bg-zinc-900"
-                    />
+                  {product.imageUrls.length > 0 ? (
+                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {product.imageUrls.slice(0, 3).map((imageUrl, index) => (
+                        <img
+                          key={`${product.id}-mobile-${index}`}
+                          src={imageUrl}
+                          alt={`${product.name} ${index + 1}`}
+                          className={`rounded-xl bg-zinc-100 object-cover dark:bg-zinc-900 ${
+                            index === 0 ? "col-span-2 h-40 sm:col-span-3" : "h-24"
+                          }`}
+                        />
+                      ))}
+                    </div>
                   ) : null}
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -438,11 +578,18 @@ export function ProductListContainer() {
                     <td className="px-4 py-3">
                       <div className="flex items-start gap-4">
                         {product.imageUrl ? (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="h-14 w-20 shrink-0 rounded-lg bg-zinc-100 object-cover dark:bg-zinc-900"
-                          />
+                          <div className="relative shrink-0">
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-14 w-20 rounded-lg bg-zinc-100 object-cover dark:bg-zinc-900"
+                            />
+                            {product.imageUrls.length > 1 ? (
+                              <span className="absolute -right-2 -top-2 rounded-full bg-zinc-950 px-1.5 py-0.5 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-950">
+                                +{product.imageUrls.length - 1}
+                              </span>
+                            ) : null}
+                          </div>
                         ) : null}
                         <div className="min-w-0">
                         <Text className="font-medium">{product.name}</Text>
@@ -482,7 +629,7 @@ export function ProductListContainer() {
                         >
                           View
                         </Link>
-                        <ActionMenuItem onSelect={() => openEditModal(product)}>
+                        <ActionMenuItem onSelect={() => void openEditModal(product)}>
                           Edit
                         </ActionMenuItem>
                         <ActionMenuItem onSelect={() => handleToggleStatus(product)}>
@@ -518,6 +665,17 @@ export function ProductListContainer() {
         title={editingProduct ? "Edit product" : "Create product"}
       >
         <div className="space-y-4">
+          {isEditLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-40 w-full" />
+            </div>
+          ) : null}
+
+          {!isEditLoading ? (
+          <>
           <div className="space-y-1.5">
             <Text as="span" className="text-sm font-medium">
               Name
@@ -667,31 +825,97 @@ export function ProductListContainer() {
 
           <div className="space-y-1.5">
             <Text as="span" className="text-sm font-medium">
-              Image URL
+              Product images
             </Text>
-            <Input
-              type="url"
-              value={form.imageUrl}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  imageUrl: event.target.value,
-                }))
-              }
-              placeholder="https://res.cloudinary.com/your-cloud/image/upload/v123/products/iphone15.jpg"
-              hasError={Boolean(errors.imageUrl)}
-            />
-            {errors.imageUrl ? (
+            <div className="rounded-xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <Text className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {form.imageUrls.length + pendingImages.length > 0
+                    ? pendingImages.length > 0
+                      ? "New images selected."
+                      : editingProduct
+                        ? "Existing images loaded. Add more or remove any image below."
+                        : "Product images selected."
+                    : "Choose one or more product images to upload."}
+                </Text>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={triggerUpload}>
+                    {editingProduct ? "Add more images" : "Select images"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {errors.imageUrls ? (
               <Text className="text-sm text-red-600 dark:text-red-400">
-                {errors.imageUrl}
+                {errors.imageUrls}
               </Text>
             ) : null}
-            {form.imageUrl ? (
-              <img
-                src={form.imageUrl}
-                alt="Product preview"
-                className="h-40 w-full rounded-xl bg-zinc-100 object-cover dark:bg-zinc-900"
-              />
+            {form.imageUrls.length + pendingImages.length > 0 ? (
+              <div className="space-y-3">
+                {editingProduct && form.imageUrls.length > 0 ? (
+                  <div>
+                    <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      Existing images
+                    </Text>
+                    <div className="-mx-1 overflow-x-auto pb-2">
+                      <div className="flex min-w-max gap-3 px-1">
+                        {form.imageUrls.map((imageUrl, index) => (
+                          <div
+                            key={`existing-${index}`}
+                            className="relative w-36 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => removeExistingImage(index)}
+                              className="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-sm text-zinc-700 shadow transition hover:bg-white dark:bg-zinc-950/90 dark:text-zinc-200"
+                              aria-label={`Remove image ${index + 1}`}
+                            >
+                              x
+                            </button>
+                            <img
+                              src={imageUrl}
+                              alt={`Product preview ${index + 1}`}
+                              className="h-32 w-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {pendingImages.length > 0 ? (
+                  <div>
+                    <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                      New images
+                    </Text>
+                    <div className="-mx-1 overflow-x-auto pb-2">
+                      <div className="flex min-w-max gap-3 px-1">
+                        {pendingImages.map((image, index) => (
+                          <div
+                            key={image.id}
+                            className="relative w-36 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => removePendingImage(image.id)}
+                              className="absolute right-2 top-2 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-sm text-zinc-700 shadow transition hover:bg-white dark:bg-zinc-950/90 dark:text-zinc-200"
+                              aria-label={`Remove new image ${index + 1}`}
+                            >
+                              x
+                            </button>
+                            <img
+                              src={image.previewUrl}
+                              alt={`New product preview ${index + 1}`}
+                              className="h-32 w-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </div>
 
@@ -699,7 +923,7 @@ export function ProductListContainer() {
             <Button variant="ghost" onClick={closeModal} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
+            <Button onClick={handleSubmit} disabled={isSubmitting || isEditLoading}>
               {isSubmitting
                 ? "Saving..."
                 : editingProduct
@@ -707,6 +931,8 @@ export function ProductListContainer() {
                   : "Create product"}
             </Button>
           </div>
+          </>
+          ) : null}
         </div>
       </Modal>
 

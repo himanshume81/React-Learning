@@ -28,6 +28,7 @@ export function ProductDetailContainer({ productId }: { productId: string }) {
         return;
       }
 
+      console.log("Fetched product:", result);
       setProduct(result);
       setIsLoading(false);
     });
@@ -60,7 +61,7 @@ export function ProductDetailContainer({ productId }: { productId: string }) {
   }
 
   return (
-    <section className="max-w-2xl space-y-6">
+    <section className="space-y-6">
       <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <Text className="text-sm font-medium uppercase tracking-wide text-zinc-500">
           Product ID
@@ -69,42 +70,65 @@ export function ProductDetailContainer({ productId }: { productId: string }) {
           {formatRecordId("PRD", product.id)}
         </Text>
 
-        <div className="mt-6 space-y-4">
-          {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="h-56 w-full rounded-xl bg-zinc-100 object-cover dark:bg-zinc-900"
-            />
-          ) : null}
-          <div>
-            <Text className="text-sm font-medium text-zinc-500">Name</Text>
-            <Text className="mt-1 text-base">{product.name}</Text>
+        <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="space-y-3">
+            {product.imageUrls.length > 0 ? (
+              <>
+                <img
+                  src={product.imageUrls[0]}
+                  alt={product.name}
+                  className="h-72 w-full rounded-2xl bg-zinc-100 object-cover sm:h-96 dark:bg-zinc-900"
+                />
+                {product.imageUrls.length > 1 ? (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {product.imageUrls.slice(1).map((imageUrl, index) => (
+                      <img
+                        key={`${product.id}-detail-${index}`}
+                        src={imageUrl}
+                        alt={`${product.name} gallery ${index + 2}`}
+                        className="h-28 w-full rounded-xl bg-zinc-100 object-cover sm:h-32 dark:bg-zinc-900"
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-500 sm:h-96 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+                No product images
+              </div>
+            )}
           </div>
-          <div>
-            <Text className="text-sm font-medium text-zinc-500">Description</Text>
-            <Text className="mt-1 text-base">{product.description}</Text>
-          </div>
-          <div>
-            <Text className="text-sm font-medium text-zinc-500">SKU</Text>
-            <Text className="mt-1 text-base">{product.sku}</Text>
-          </div>
-          <div>
-            <Text className="text-sm font-medium text-zinc-500">Category</Text>
-            <Text className="mt-1 text-base">{product.categoryName}</Text>
-          </div>
-          <div>
-            <Text className="text-sm font-medium text-zinc-500">Price</Text>
-            <Text className="mt-1 text-base">{formatPrice(product.price)}</Text>
-          </div>
-          <div>
-            <Text className="text-sm font-medium text-zinc-500">Stock</Text>
-            <Text className="mt-1 text-base">{product.stock}</Text>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge tone={product.status === "active" ? "success" : "neutral"}>
-              {product.status}
-            </Badge>
+
+          <div className="space-y-4">
+            <div>
+              <Text className="text-sm font-medium text-zinc-500">Name</Text>
+              <Text className="mt-1 text-base">{product.name}</Text>
+            </div>
+            <div>
+              <Text className="text-sm font-medium text-zinc-500">Description</Text>
+              <Text className="mt-1 text-base">{product.description}</Text>
+            </div>
+            <div>
+              <Text className="text-sm font-medium text-zinc-500">SKU</Text>
+              <Text className="mt-1 text-base">{product.sku}</Text>
+            </div>
+            <div>
+              <Text className="text-sm font-medium text-zinc-500">Category</Text>
+              <Text className="mt-1 text-base">{product.categoryName}</Text>
+            </div>
+            <div>
+              <Text className="text-sm font-medium text-zinc-500">Price</Text>
+              <Text className="mt-1 text-base">{formatPrice(product.price)}</Text>
+            </div>
+            <div>
+              <Text className="text-sm font-medium text-zinc-500">Stock</Text>
+              <Text className="mt-1 text-base">{product.stock}</Text>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge tone={product.status === "active" ? "success" : "neutral"}>
+                {product.status}
+              </Badge>
+            </div>
           </div>
         </div>
       </div>
