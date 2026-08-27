@@ -1,5 +1,6 @@
 "use client";
 
+import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { OrderStatusSelect } from "@/components/molecules/OrderStatusSelect";
@@ -171,9 +172,22 @@ export function OrdersPageContainer() {
         <>
           <div className="space-y-3 md:hidden">
             {isLoading ? (
-              <div className="rounded-xl border border-zinc-200 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
-                Loading orders...
-              </div>
+              Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="mt-2 h-4 w-40" />
+                  <Skeleton className="mt-2 h-4 w-52" />
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="col-span-2 h-10 w-full" />
+                    <Skeleton className="col-span-2 h-10 w-full" />
+                  </div>
+                </div>
+              ))
             ) : (
               paginatedOrders.map((order) => (
                 <article
@@ -236,11 +250,32 @@ export function OrdersPageContainer() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-zinc-500">
-                      Loading orders...
-                    </td>
-                  </tr>
+                  Array.from({ length: 5 }, (_, index) => (
+                    <tr
+                      key={index}
+                      className="border-b border-zinc-200 last:border-0 dark:border-zinc-800"
+                    >
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-4 w-24" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="mt-2 h-4 w-56" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-4 w-16" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-4 w-10" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-4 w-24" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-10 w-32" />
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   paginatedOrders.map((order) => (
                     <tr

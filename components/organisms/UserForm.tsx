@@ -3,7 +3,6 @@
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
 import { FormField } from "@/components/molecules/FormField";
-import { SelectField } from "@/components/molecules/SelectField";
 import { ApiError } from "@/lib/api-client";
 import { userSchema, type UserFormValues } from "@/lib/validation/user-schema";
 import { useState } from "react";
@@ -31,7 +30,7 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
       email: "",
       phoneNumber: "",
       password: "",
-      role: "user",
+      role: "admin",
       status: "active",
     },
   });
@@ -95,20 +94,30 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
           {...register("phoneNumber")}
         />
 
-        <SelectField id="role" label="Role" error={errors.role?.message} {...register("role")}>
-          <option value="admin">Admin</option>
-          <option value="user">User</option>
-        </SelectField>
+        <input type="hidden" value="admin" {...register("role")} />
 
-        <SelectField
+        <div className="space-y-1.5">
+          <Text as="span" className="text-sm font-medium">
+            Role
+          </Text>
+          <Text className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+            Admin
+          </Text>
+        </div>
+
+        <select
           id="status"
-          label="Status"
-          error={errors.status?.message}
           {...register("status")}
+          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-foreground focus:ring-2 focus:ring-foreground/20 dark:border-zinc-700 dark:bg-zinc-950"
         >
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
-        </SelectField>
+        </select>
+        {errors.status?.message && (
+          <Text className="text-sm text-red-600 dark:text-red-400" role="alert">
+            {errors.status.message}
+          </Text>
+        )}
       </div>
 
       {formError && (

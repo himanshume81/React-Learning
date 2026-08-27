@@ -3,6 +3,7 @@
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
+import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -185,9 +186,22 @@ export function CategoryManagementContainer() {
         <>
           <div className="space-y-3 md:hidden">
             {isLoading ? (
-              <div className="rounded-xl border border-zinc-200 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
-                Loading categories...
-              </div>
+              Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="mt-3 h-5 w-40" />
+                  <Skeleton className="mt-2 h-4 w-28" />
+                  <Skeleton className="mt-4 h-4 w-full" />
+                  <Skeleton className="mt-2 h-4 w-5/6" />
+                  <div className="mt-4 flex gap-2">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </div>
+                </div>
+              ))
             ) : (
               categories.map((category) => (
                 <article
@@ -266,11 +280,32 @@ export function CategoryManagementContainer() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-zinc-500">
-                    Loading categories...
-                  </td>
-                </tr>
+                Array.from({ length: 5 }, (_, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-zinc-200 last:border-0 dark:border-zinc-800"
+                  >
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-20" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="mt-2 h-4 w-64" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-10" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-8 w-10 rounded-lg" />
+                    </td>
+                  </tr>
+                ))
               ) : (
                 categories.map((category) => (
                   <tr

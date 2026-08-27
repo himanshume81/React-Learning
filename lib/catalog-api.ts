@@ -16,6 +16,9 @@ type RawProduct = {
   id: number | string;
   name: string;
   description?: string | null;
+  image?: string | null;
+  imageUrl?: string[] | null;
+  images?: unknown;
   sku?: string | null;
   price: number | string;
   stock?: number | string | null;
@@ -80,17 +83,77 @@ function toCategory(raw: RawCategory, productCount?: number): Category {
   };
 }
 
+function extractImageUrls(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((entry) => extractImageUrls(entry))
+      .filter((imageUrl, index, array) => array.indexOf(imageUrl) === index);
+  }
+
+  if (typeof value === "string") {
+    const directValue = value.trim();
+
+    if (
+      directValue === "" ||
+      directValue === "{}" ||
+      directValue === "[]" ||
+      directValue.toLowerCase() === "null"
+    ) {
+      return [];
+    }
+
+    const matches = directValue.match(/https?:\/\/[^"',}\]\s]+/g);
+
+    if (matches && matches.length > 0) {
+      return matches.filter(
+        (imageUrl, index, array) => array.indexOf(imageUrl) === index
+      );
+    }
+
+    return directValue ? [directValue] : [];
+  }
+
+  if (value && typeof value === "object") {
+    const candidate = value as {
+      url?: unknown;
+      image?: unknown;
+      imageUrl?: unknown;
+      src?: unknown;
+      secure_url?: unknown;
+    };
+
+    return [
+      candidate.url,
+      candidate.image,
+      candidate.imageUrl,
+      candidate.src,
+      candidate.secure_url,
+    ]
+      .flatMap((entry) => extractImageUrls(entry))
+      .filter((imageUrl, index, array) => array.indexOf(imageUrl) === index);
+  }
+
+  return [];
+}
+
 function toProduct(raw: RawProduct, categories: Category[]): Product {
   const categoryId = String(raw.categoryId);
   const categoryName =
     raw.category?.name ??
     categories.find((category) => category.id === categoryId)?.name ??
     `Category ${categoryId}`;
+  const normalizedImageUrls = [
+    ...extractImageUrls(raw.images),
+    ...extractImageUrls(raw.imageUrl),
+    ...extractImageUrls(raw.image),
+  ].filter((imageUrl, index, array) => array.indexOf(imageUrl) === index);
 
   return {
     id: String(raw.id),
     name: raw.name,
     description: raw.description ?? "",
+    imageUrl: normalizedImageUrls[0] ?? "",
+    imageUrls: normalizedImageUrls,
     sku: raw.sku ?? "",
     price: Number(raw.price),
     stock: Number(raw.stock ?? 0),
@@ -249,12 +312,14 @@ export async function createProduct(input: ProductInput): Promise<Product> {
   const raw = await apiFetch<RawProduct>("/products", {
     method: "POST",
     body: {
+      categoryId: Number(input.categoryId),
       name: input.name.trim(),
       description: input.description.trim(),
+      image: input.imageUrls[0] ?? undefined,
+      images: input.imageUrls.length > 0 ? input.imageUrls : undefined,
       sku: input.sku.trim(),
       price: input.price,
       stock: input.stock,
-      categoryId: Number(input.categoryId),
       status: "ACTIVE",
     },
     auth: true,
@@ -262,6 +327,29 @@ export async function createProduct(input: ProductInput): Promise<Product> {
 
   const categories = await fetchCategories();
   return toProduct(raw, categories);
+}
+
+export async function uploadProductImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const raw = await apiFetch<{
+    url?: string;
+    secure_url?: string;
+    image?: string;
+    data?: { url?: string };
+  }>("/uploads?folder=products", {
+    method: "POST",
+    body: formData,
+    auth: true,
+  });
+
+  return raw.url ?? raw.secure_url ?? raw.image ?? raw.data?.url ?? "";
+}
+
+export async function uploadProductImages(files: File[]): Promise<string[]> {
+  const uploadedImages = await Promise.all(files.map(uploadProductImage));
+  return uploadedImages.filter((imageUrl) => Boolean(imageUrl));
 }
 
 export async function updateProduct(
@@ -276,6 +364,11 @@ export async function updateProduct(
 
   if (input.description !== undefined) {
     body.description = input.description.trim();
+  }
+
+  if (input.imageUrls !== undefined) {
+    body.image = input.imageUrls[0] ?? null;
+    body.images = input.imageUrls;
   }
 
   if (input.sku !== undefined) {

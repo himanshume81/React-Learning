@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
+import { EmptyState } from "@/components/molecules/EmptyState";
 import { Pagination, type PageSize } from "@/components/molecules/Pagination";
 import { SearchFilterBar } from "@/components/molecules/SearchFilterBar";
 import { UserTable } from "@/components/organisms/UserTable";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { deleteUser, fetchUsers } from "@/lib/users-api";
-import type { User, UserStatus } from "@/types/user";
+import type { User, UserRole, UserStatus } from "@/types/user";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -27,7 +28,21 @@ function toApiPageSize(pageSize: PageSize) {
   return pageSize === "all" ? ALL_PAGE_SIZE : pageSize;
 }
 
-export function UsersPageContainer() {
+type UsersPageContainerProps = {
+  targetRole?: UserRole | "all";
+  title?: string;
+  description?: string;
+  addHref?: string | null;
+  addLabel?: string;
+};
+
+export function UsersPageContainer({
+  targetRole = "admin",
+  title = "Users",
+  description = "Search, filter, and manage user accounts.",
+  addHref = "/users/add",
+  addLabel = "+ Add user",
+}: UsersPageContainerProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -57,6 +72,7 @@ export function UsersPageContainer() {
     fetchUsers({
       search: debouncedSearch,
       status,
+      role: targetRole,
       page,
       pageSize: toApiPageSize(pageSize),
     }).then((result) => {
@@ -99,20 +115,49 @@ export function UsersPageContainer() {
     }
   };
 
+  if (!isLoading && users.length === 0 && targetRole === "user") {
+    return (
+      <section className="space-y-6">
+        <div>
+          <Text as="h1" className="text-2xl font-semibold">
+            {title}
+          </Text>
+          <Text className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            {description}
+          </Text>
+        </div>
+
+        <SearchFilterBar
+          search={searchInput}
+          onSearchChange={setSearchInput}
+          status={status}
+          onStatusChange={setStatus}
+        />
+
+        <EmptyState
+          title="No customers found"
+          description="Try adjusting your search or filter."
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Text as="h1" className="text-2xl font-semibold">
-            Users
+            {title}
           </Text>
           <Text className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Search, filter, and manage user accounts.
+            {description}
           </Text>
         </div>
-        <Link href="/users/add">
-          <Button>+ Add user</Button>
-        </Link>
+        {addHref ? (
+          <Link href={addHref}>
+            <Button>{addLabel}</Button>
+          </Link>
+        ) : null}
       </div>
 
       <SearchFilterBar

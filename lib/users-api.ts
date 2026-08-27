@@ -16,13 +16,18 @@ export type RawUser = {
 };
 
 export function toUser(raw: RawUser): User {
+  const normalizedRole =
+    String(raw.role).toLowerCase() === "admin" ? "admin" : "user";
+  const normalizedStatus =
+    String(raw.status).toLowerCase() === "inactive" ? "inactive" : "active";
+
   return {
     id: String(raw.id),
     name: raw.name,
     email: raw.email,
     phoneNumber: raw.phoneNumber,
-    role: raw.role,
-    status: raw.status,
+    role: normalizedRole,
+    status: normalizedStatus,
     joinedAt: raw.createdAt,
   };
 }
@@ -42,6 +47,7 @@ function logActivity(action: ActivityAction, userName: string) {
 export type UserQuery = {
   search?: string;
   status?: UserStatus | "all";
+  role?: UserRole | "all";
   page?: number;
   pageSize?: number;
 };
@@ -64,6 +70,7 @@ async function fetchAllUsers(): Promise<User[]> {
 export async function fetchUsers({
   search = "",
   status = "all",
+  role = "all",
   page = 1,
   pageSize = 10,
 }: UserQuery = {}): Promise<PaginatedUsers> {
@@ -81,6 +88,10 @@ export async function fetchUsers({
 
   if (status !== "all") {
     filtered = filtered.filter((user) => user.status === status);
+  }
+
+  if (role !== "all") {
+    filtered = filtered.filter((user) => user.role === role);
   }
 
   const total = filtered.length;

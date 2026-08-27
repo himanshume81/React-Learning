@@ -2,6 +2,11 @@ export type UserStatus = "active" | "inactive";
 
 export type UserRole = "admin" | "user";
 
+export const USER_ROLES = {
+  ADMIN: "admin",
+  USER: "user",
+} as const;
+
 export type User = {
   id: string;
   name: string;
