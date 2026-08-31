@@ -1,10 +1,5 @@
-import { OrdersPageContainer } from "@/components/organisms/OrdersPageContainer";
-import { AppLayout } from "@/components/templates/AppLayout";
+import { AdminStaticRoute } from "@/components/templates/AdminStaticRoute";
 
 export default function OrdersPage() {
-  return (
-    <AppLayout>
-      <OrdersPageContainer />
-    </AppLayout>
-  );
+  return <AdminStaticRoute pageKey="ordersAll" />;
 }

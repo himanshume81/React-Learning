@@ -13,12 +13,17 @@ const links: Array<{
   roles?: UserRole[];
 }> = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/users", label: "Users", roles: ["admin"] },
-  { href: "/customers", label: "Customers" },
-  { href: "/categories", label: "Categories" },
-  { href: "/products", label: "Products" },
+  { href: "/users/stores", label: "User Management", roles: ["admin"] },
+  { href: "/catalogue/products", label: "Catalogue" },
   { href: "/orders", label: "Orders" },
+  { href: "/customers", label: "Customers" },
+  { href: "/discounts/products", label: "Discounts" },
+  { href: "/marketing/notifications", label: "Marketing" },
   { href: "/banners", label: "Banners" },
+  { href: "/delivery/boys", label: "Delivery" },
+  { href: "/reports/sales", label: "Reports" },
+  { href: "/integrations", label: "Integrations" },
+  { href: "/cms/about-us", label: "CMS" },
 ];
 
 function isActive(pathname: string, href: string) {

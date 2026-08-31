@@ -1,5 +1,5 @@
-import { DashboardOverview } from "@/components/organisms/DashboardOverview";
+import { AdminStaticRoute } from "@/components/templates/AdminStaticRoute";
 
 export default function DashboardPage() {
-  return <DashboardOverview />;
+  return <AdminStaticRoute pageKey="dashboard" />;
 }

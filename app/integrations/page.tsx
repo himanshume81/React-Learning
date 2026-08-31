@@ -2,11 +2,11 @@ import { AdminStaticRoute } from "@/components/templates/AdminStaticRoute";
 import { AppLayout } from "@/components/templates/AppLayout";
 import { AuthGuard } from "@/components/templates/AuthGuard";
 
-export default function BannersPage() {
+export default function IntegrationsPage() {
   return (
     <AuthGuard>
       <AppLayout>
-        <AdminStaticRoute pageKey="banners" />
+        <AdminStaticRoute pageKey="integrations" />
       </AppLayout>
     </AuthGuard>
   );
