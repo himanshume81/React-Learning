@@ -148,7 +148,8 @@ export function OrdersPageContainer() {
         fetchProducts(),
         fetchUsers({ pageSize: Number.MAX_SAFE_INTEGER }),
       ]);
-      const availableProducts = products.filter((product) => product.stock > 0);
+      // const availableProducts = products.filter((product) => product.stock > 0);
+      const availableProducts = products;
       const availableUsers = users.data.filter(
         (user) => user.status === "active" && user.role === "user"
       );
@@ -211,24 +212,24 @@ export function OrdersPageContainer() {
       productId: Number(item.productId),
       quantity: Number(item.quantity),
     }));
-    const hasInvalidItem =
-      items.length === 0 ||
-      items.some(
-        (item) =>
-          !Number.isInteger(item.productId) ||
-          item.productId <= 0 ||
-          !Number.isInteger(item.quantity) ||
-          item.quantity <= 0 ||
-          item.quantity >
-            (orderProducts.find((product) => product.id === String(item.productId))
-              ?.stock ?? 0)
-      ) ||
-      new Set(items.map((item) => item.productId)).size !== items.length;
+    // const hasInvalidItem =
+    //   items.length === 0 ||
+    //   items.some(
+    //     (item) =>
+    //       !Number.isInteger(item.productId) ||
+    //       item.productId <= 0 ||
+    //       !Number.isInteger(item.quantity) ||
+    //       item.quantity <= 0 ||
+    //       item.quantity >
+    //         (orderProducts.find((product) => product.id === String(item.productId))
+    //           ?.stock ?? 0)
+    //   ) ||
+    //   new Set(items.map((item) => item.productId)).size !== items.length;
 
-    if (hasInvalidItem) {
-      showToast("Choose each product once and enter a whole quantity of at least 1.", "error");
-      return;
-    }
+    // if (hasInvalidItem) {
+    //   showToast("Choose each product once and enter a whole quantity of at least 1.", "error");
+    //   return;
+    // }
 
     setIsCreatingOrder(true);
 
@@ -527,7 +528,7 @@ export function OrdersPageContainer() {
                 ))}
               </Select>
             </label>
-
+            
             {orderItems.map((item, index) => {
               const selectedProduct = orderProducts.find(
                 (product) => product.id === item.productId
@@ -557,7 +558,7 @@ export function OrdersPageContainer() {
                             orderItems.some((orderItem) => orderItem.productId === product.id)
                           }
                         >
-                          {product.name} ({product.stock} in stock)
+                          {product.name}
                         </option>
                       ))}
                     </Select>
