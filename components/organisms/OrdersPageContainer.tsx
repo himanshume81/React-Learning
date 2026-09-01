@@ -23,7 +23,7 @@ const ALL_PAGE_SIZE = 1000;
 
 type OrderItemForm = {
   productId: string;
-  quantity: number;
+  quantity: string;
 };
 
 function createIdempotencyKey() {
@@ -156,7 +156,7 @@ export function OrdersPageContainer() {
       setOrderUsers(availableUsers);
       setOrderItems(
         availableProducts.length > 0
-          ? [{ productId: availableProducts[0].id, quantity: 1 }]
+          ? [{ productId: availableProducts[0].id, quantity: "1" }]
           : []
       );
       setSelectedUserId(availableUsers[0]?.id ?? "");
@@ -194,7 +194,7 @@ export function OrdersPageContainer() {
     if (unusedProduct) {
       setOrderItems((current) => [
         ...current,
-        { productId: unusedProduct.id, quantity: 1 },
+        { productId: unusedProduct.id, quantity: "1" },
       ]);
     }
   }
@@ -571,9 +571,10 @@ export function OrdersPageContainer() {
                       max={selectedProduct?.stock}
                       value={item.quantity}
                       disabled={isCreatingOrder}
-                      onChange={(event) =>
-                        updateOrderItem(index, { quantity: Number(event.target.value) })
-                      }
+                      onChange={(event) => {
+                        const quantity = event.target.value.replace(/^0+(?=\d)/, "");
+                        updateOrderItem(index, { quantity });
+                      }}
                     />
                   </label>
                   <Button
