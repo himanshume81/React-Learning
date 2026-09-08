@@ -11,6 +11,7 @@ type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  steps?: string[];
 };
 
 const initialMessage: ChatMessage = {
@@ -55,7 +56,12 @@ export function AiChat() {
     try {
       const nextHistory: ApiChatMessage[] = [...messages, userMessage]
         .slice(-MAX_HISTORY_MESSAGES)
-        .map(({ role, content }) => ({ role, content }));
+        .map(({ role, content, steps }) => ({
+          role,
+          content: steps?.length
+            ? `${content}\n\n${steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`
+            : content,
+        }));
 
       const response = await sendAiChatMessage({
         messages: nextHistory,
@@ -67,6 +73,9 @@ export function AiChat() {
           id: response.responseId ?? `assistant-${Date.now()}`,
           role: "assistant",
           content: response.reply,
+          steps: Array.isArray(response.steps)
+            ? response.steps.filter((step) => typeof step === "string" && step.trim().length > 0)
+            : [],
         },
       ]);
     } catch (err) {
@@ -122,6 +131,15 @@ export function AiChat() {
                   {message.role === "user" ? "You" : "AI"}
                 </Text>
                 <Text className="whitespace-pre-wrap leading-6">{message.content}</Text>
+                {message.role === "assistant" && !!message.steps?.length && (
+                  <ol className="mt-3 list-decimal space-y-2 pl-5 leading-6">
+                    {message.steps.map((step, index) => (
+                      <li key={`${message.id}-step-${index}`} className="whitespace-pre-wrap pl-1">
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </div>
             </div>
           ))}

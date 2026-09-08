@@ -13,6 +13,7 @@ export type AiChatRequest = {
 
 export type AiChatResponse = {
   reply: string;
+  steps?: string[];
   responseId?: string;
 };
 
