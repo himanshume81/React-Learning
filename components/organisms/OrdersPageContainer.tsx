@@ -6,10 +6,13 @@ import { Select } from "@/components/atoms/Select";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
 import { EmptyState } from "@/components/molecules/EmptyState";
+import { AiSearchForm } from "@/components/molecules/AiSearchForm";
+import { OrderSearchAssistant, type OrderAssistantMessage } from "@/components/organisms/OrderSearchAssistant";
 import { Modal } from "@/components/molecules/Modal";
 import { OrderStatusSelect } from "@/components/molecules/OrderStatusSelect";
 import { Pagination, type PageSize } from "@/components/molecules/Pagination";
 import { useToast } from "@/context/ToastContext";
+import { sendAiChatMessage, type AiChatMessage } from "@/lib/ai-api";
 import { fetchProducts } from "@/lib/catalog-api";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { createOrder, fetchOrders, updateOrderStatus } from "@/lib/orders-api";
@@ -17,7 +20,7 @@ import { fetchUsers } from "@/lib/users-api";
 import { ORDER_STATUS_FLOW, type Order, type OrderStatus } from "@/types/order";
 import type { Product } from "@/types/product";
 import type { User } from "@/types/user";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const ALL_PAGE_SIZE = 1000;
 
@@ -73,6 +76,70 @@ export function OrdersPageContainer() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [ordersVersion, setOrdersVersion] = useState(0);
+  const [aiQuery, setAiQuery] = useState<string | null>(null);
+  const [aiMessages, setAiMessages] = useState<OrderAssistantMessage[]>([]);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const aiRequestId = useRef(0);
+  const aiHistory = useRef<AiChatMessage[]>([]);
+  const aiRetryMessages = useRef<AiChatMessage[]>([]);
+
+  async function requestAiResponse(messages: AiChatMessage[]) {
+    const requestId = ++aiRequestId.current;
+    setAiError(null);
+    setIsAiLoading(true);
+    aiRetryMessages.current = messages;
+
+    try {
+      const response = await sendAiChatMessage({ messages });
+      if (requestId === aiRequestId.current) {
+        const steps = Array.isArray(response.steps)
+          ? response.steps.filter((step) => typeof step === "string" && step.trim())
+          : [];
+        aiHistory.current = [...messages, {
+          role: "assistant",
+          content: [response.reply, ...steps].join("\n\n"),
+        }];
+        setAiMessages((current) => [...current, {
+          id: response.responseId ?? `assistant-${Date.now()}`,
+          role: "assistant",
+          content: response.reply,
+          steps,
+        }]);
+      }
+    } catch (error) {
+      if (requestId === aiRequestId.current) {
+        setAiError(error instanceof Error ? error.message : "Failed to search orders. Please try again.");
+      }
+    } finally {
+      if (requestId === aiRequestId.current) setIsAiLoading(false);
+    }
+  }
+
+  function handleAiSearch(params: { q: string } | null) {
+    if (!params) {
+      aiRequestId.current += 1;
+      setAiQuery(null);
+      setIsAssistantOpen(false);
+      setIsAiLoading(false);
+      setAiError(null);
+      return;
+    }
+
+    const messages: AiChatMessage[] = [
+      ...aiHistory.current.slice(-18),
+      { role: "user", content: params.q },
+    ];
+    setAiQuery(params.q);
+    setIsAssistantOpen(true);
+    setAiMessages((current) => [...current, {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: params.q,
+    }]);
+    void requestAiResponse(messages);
+  }
 
   const debouncedSearch = useDebounce(searchInput, 300);
 
@@ -294,6 +361,22 @@ export function OrdersPageContainer() {
         </div>
         <Button onClick={() => void openCreateOrderModal()}>Create order</Button>
       </div>
+
+      <div className={aiQuery && isAssistantOpen ? "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]" : "grid min-w-0 gap-6"}>
+      <div className="min-w-0 space-y-6">
+      <AiSearchForm
+        subject="order"
+        placeholder="Search orders by customer, status, date..."
+        hint="Try “show pending orders from this week”."
+        onSearch={(params) => void handleAiSearch(params)}
+        isLoading={isAiLoading}
+      />
+      {aiQuery ? (
+        <div className="flex items-center justify-between gap-3">
+          <Text className="text-sm text-zinc-500">AI response for “{aiQuery}”.</Text>
+          {!isAssistantOpen ? <Button variant="secondary" onClick={() => setIsAssistantOpen(true)}>Show AI response</Button> : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
@@ -634,6 +717,18 @@ export function OrdersPageContainer() {
         rangeEnd={rangeEnd}
         total={displayTotal}
       />
+      </div>
+      {aiQuery && isAssistantOpen ? (
+        <OrderSearchAssistant
+          messages={aiMessages}
+          isLoading={isAiLoading}
+          error={aiError}
+          onClose={() => setIsAssistantOpen(false)}
+          onRetry={() => void requestAiResponse(aiRetryMessages.current)}
+          onSearch={(q) => handleAiSearch({ q })}
+        />
+      ) : null}
+      </div>
     </section>
   );
 }
