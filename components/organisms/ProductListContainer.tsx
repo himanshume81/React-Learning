@@ -10,6 +10,8 @@ import { ActionMenu, ActionMenuItem } from "@/components/molecules/ActionMenu";
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { Modal } from "@/components/molecules/Modal";
+import { ProductSearchForm } from "@/components/molecules/ProductSearchForm";
+import { ProductSearchAssistant } from "@/components/organisms/ProductSearchAssistant";
 import { ApiError } from "@/lib/api-client";
 import {
   createProduct,
@@ -18,6 +20,8 @@ import {
   fetchProductById,
   fetchProducts,
   formatRecordId,
+  searchProducts,
+  type ProductSearchParams,
   uploadProductImages,
   updateProduct,
 } from "@/lib/catalog-api";
@@ -25,7 +29,7 @@ import { useToast } from "@/context/ToastContext";
 import type { Category } from "@/types/category";
 import type { Product, ProductInput } from "@/types/product";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 const emptyForm: ProductInput = {
   name: "",
@@ -95,7 +99,11 @@ export function ProductListContainer() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [activeSearch, setActiveSearch] = useState<ProductSearchParams | null>(null);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [searchReply, setSearchReply] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const requestId = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,25 +136,43 @@ export function ProductListContainer() {
     setCategories(await fetchCategories());
   }
 
-  async function refreshProducts(categoryId = selectedCategoryId) {
+  const refreshProducts = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setIsLoading(true);
+    setLoadError(null);
 
     try {
-      setProducts(
-        await fetchProducts(categoryId === "all" ? undefined : categoryId)
-      );
+      const results = activeSearch
+        ? await searchProducts(activeSearch)
+        : { products: await fetchProducts(), reply: null };
+      if (currentRequest !== requestId.current) return;
+      setProducts(results.products);
+      setSearchReply(results.reply);
+    } catch (error) {
+      if (currentRequest !== requestId.current) return;
+      setProducts([]);
+      setLoadError(error instanceof Error ? error.message : "Could not load products. Please try again.");
     } finally {
-      setIsLoading(false);
+      if (currentRequest === requestId.current) setIsLoading(false);
     }
-  }
+  }, [activeSearch]);
 
   useEffect(() => {
-    Promise.all([refreshCategories(), refreshProducts("all")]);
+    let cancelled = false;
+    void fetchCategories().then((results) => {
+      if (!cancelled) setCategories(results);
+    }).catch(() => {
+      if (!cancelled) setLoadError("Could not load categories. Please try again.");
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    refreshProducts(selectedCategoryId);
-  }, [selectedCategoryId]);
+    // Synchronize the server results and loading state with submitted search filters.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshProducts();
+    return () => { requestId.current += 1; };
+  }, [refreshProducts]);
 
   function openCreateModal() {
     setEditingProduct(null);
@@ -357,7 +383,7 @@ export function ProductListContainer() {
             Products
           </Text>
           <Text className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-            Manage products from the API and filter the list by category.
+            Manage your products and find matches using natural language.
           </Text>
         </div>
 
@@ -366,24 +392,27 @@ export function ProductListContainer() {
         </Button>
       </div>
 
-      <div className="max-w-xs">
-        <Text as="span" className="mb-1 block text-sm font-medium">
-          Filter by category
-        </Text>
-        <Select
-          value={selectedCategoryId}
-          onChange={(event) => setSelectedCategoryId(event.target.value)}
-        >
-          <option value="all">All categories</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <div className={activeSearch && isAssistantOpen ? "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]" : "grid min-w-0 gap-6"}>
+      <div className="min-w-0 space-y-6">
+      <ProductSearchForm onSearch={(params) => {
+        setActiveSearch(params);
+        setIsAssistantOpen(Boolean(params));
+        setSearchReply(null);
+        if (params) {
+          setIsLoading(true);
+          setLoadError(null);
+        }
+      }} isLoading={isLoading} />
 
-      {categories.length === 0 && !isLoading ? (
+      {activeSearch ? <div className="flex items-center justify-between gap-3"><Text className="text-sm text-zinc-500">AI matches for “{activeSearch.q}”.</Text>{!isAssistantOpen ? <Button variant="secondary" onClick={() => setIsAssistantOpen(true)}>Show AI response</Button> : null}</div> : null}
+
+      <div id="product-results" className="scroll-mt-6 space-y-6">
+      {loadError ? (
+        <div role="alert" className="space-y-3">
+          <Text className="text-sm text-red-600 dark:text-red-400">{loadError}</Text>
+          <Button variant="secondary" onClick={() => void refreshProducts()}>Retry</Button>
+        </div>
+      ) : categories.length === 0 && !isLoading && !activeSearch ? (
         <EmptyState
           title="Create a category first"
           description="Products need a category before they can be added."
@@ -392,9 +421,9 @@ export function ProductListContainer() {
         <EmptyState
           title="No products found"
           description={
-            selectedCategoryId === "all"
-              ? "Add your first product to start building the catalog."
-              : "There are no products for this category yet."
+            activeSearch
+              ? "Try describing the product, brand, category, price, or availability in your search."
+              : "Add your first product to start building the catalog."
           }
           action={
             categories.length > 0 ? (
@@ -655,9 +684,22 @@ export function ProductListContainer() {
       {products.length > 0 && !isLoading ? (
         <Text className="text-sm text-zinc-500">
           Showing {products.length} product{products.length === 1 ? "" : "s"}
-          {selectedCategoryId === "all" ? "" : " in the selected category"}
         </Text>
       ) : null}
+      </div>
+      </div>
+      {activeSearch && isAssistantOpen ? (
+        <ProductSearchAssistant
+          query={activeSearch.q}
+          products={products}
+          reply={searchReply}
+          isLoading={isLoading}
+          error={loadError}
+          onClose={() => setIsAssistantOpen(false)}
+          onRetry={() => void refreshProducts()}
+        />
+      ) : null}
+      </div>
 
       <Modal
         open={isModalOpen}
