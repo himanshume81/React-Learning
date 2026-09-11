@@ -11,6 +11,7 @@ type Props = {
   initialQuery?: string;
   id?: string;
   compact?: boolean;
+  clearAfterSubmit?: boolean;
 };
 
 export function AiSearchForm({
@@ -22,13 +23,17 @@ export function AiSearchForm({
   initialQuery = "",
   id = `${subject}-search`,
   compact = false,
+  clearAfterSubmit = false,
 }: Props) {
   const [query, setQuery] = useState(initialQuery);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const q = query.trim();
-    if (q) onSearch({ q });
+    if (q) {
+      onSearch({ q });
+      if (clearAfterSubmit) setQuery("");
+    }
   }
 
   return (

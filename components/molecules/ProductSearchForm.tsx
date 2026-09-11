@@ -9,6 +9,7 @@ type Props = {
   initialQuery?: string;
   id?: string;
   compact?: boolean;
+  clearAfterSubmit?: boolean;
 };
 
 export function ProductSearchForm(props: Props) {

@@ -496,3 +496,16 @@ export async function deleteProduct(id: string): Promise<void> {
     auth: true,
   });
 }
+
+export async function bulkDeleteProducts(ids: string[]): Promise<void> {
+  await apiFetch<void>("/products/bulk", {
+    method: "DELETE",
+    body: {
+      ids: ids.map((id) => {
+        const numericId = Number(id);
+        return Number.isFinite(numericId) ? numericId : id;
+      }),
+    },
+    auth: true,
+  });
+}
