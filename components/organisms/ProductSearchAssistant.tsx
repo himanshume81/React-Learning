@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Button } from "@/components/atoms/Button";
 import { Spinner } from "@/components/atoms/Spinner";
+import { ProductSearchForm } from "@/components/molecules/ProductSearchForm";
+import type { ProductSearchParams } from "@/lib/catalog-api";
 import type { Product } from "@/types/product";
 
 type Props = {
@@ -13,9 +15,10 @@ type Props = {
   error: string | null;
   onClose: () => void;
   onRetry: () => void;
+  onSearch: (params: ProductSearchParams | null) => void;
 };
 
-export function ProductSearchAssistant({ query, products, reply, isLoading, error, onClose, onRetry }: Props) {
+export function ProductSearchAssistant({ query, products, reply, isLoading, error, onClose, onRetry, onSearch }: Props) {
   return (
     <aside aria-labelledby="product-assistant-title" className="min-w-0 self-start rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -24,6 +27,17 @@ export function ProductSearchAssistant({ query, products, reply, isLoading, erro
           AI Assistant
         </h2>
         <button type="button" onClick={onClose} aria-label="Close AI Assistant" className="rounded-lg px-2 py-1 text-xl text-zinc-500 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-violet-500 dark:hover:bg-zinc-800">×</button>
+      </div>
+
+      <div className="mb-5">
+        <ProductSearchForm
+          key={query}
+          id="product-assistant-search"
+          initialQuery={query}
+          compact
+          isLoading={isLoading}
+          onSearch={onSearch}
+        />
       </div>
 
       <div className="mb-5 ml-6 break-words rounded-xl bg-violet-50 px-4 py-3 text-sm font-medium text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">{query}</div>

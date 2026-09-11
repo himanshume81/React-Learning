@@ -10,7 +10,9 @@ import { ActionMenu, ActionMenuItem } from "@/components/molecules/ActionMenu";
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { Modal } from "@/components/molecules/Modal";
+import { Pagination, type PageSize } from "@/components/molecules/Pagination";
 import { ProductSearchForm } from "@/components/molecules/ProductSearchForm";
+import { ProductBulkUpload } from "@/components/organisms/ProductBulkUpload";
 import { ProductSearchAssistant } from "@/components/organisms/ProductSearchAssistant";
 import { ApiError } from "@/lib/api-client";
 import {
@@ -18,7 +20,7 @@ import {
   deleteProduct,
   fetchCategories,
   fetchProductById,
-  fetchProducts,
+  fetchProductsPage,
   formatRecordId,
   searchProducts,
   type ProductSearchParams,
@@ -98,6 +100,14 @@ export function ProductListContainer() {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(10);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  });
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeSearch, setActiveSearch] = useState<ProductSearchParams | null>(null);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
@@ -113,6 +123,7 @@ export function ProductListContainer() {
   const [form, setForm] = useState<ProductInput>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const startIndex = (pagination.page - 1) * pagination.limit;
 
   function readFileAsDataUrl(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -136,26 +147,72 @@ export function ProductListContainer() {
     setCategories(await fetchCategories());
   }
 
+  function handleProductSearch(params: ProductSearchParams | null) {
+    setActiveSearch(params);
+    setPage(1);
+    setIsAssistantOpen(Boolean(params));
+    setSearchReply(null);
+    if (params) {
+      setIsLoading(true);
+      setLoadError(null);
+    }
+  }
+
   const refreshProducts = useCallback(async () => {
     const currentRequest = ++requestId.current;
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const results = activeSearch
-        ? await searchProducts(activeSearch)
-        : { products: await fetchProducts(), reply: null };
+      if (activeSearch) {
+        const results = await searchProducts(activeSearch);
+        if (currentRequest !== requestId.current) return;
+
+        const limit = pageSize === "all" ? results.products.length || 1 : pageSize;
+        const totalPages = Math.max(1, Math.ceil(results.products.length / limit));
+        if (page > totalPages) {
+          setPage(totalPages);
+          return;
+        }
+
+        const offset = (page - 1) * limit;
+        setProducts(results.products.slice(offset, offset + limit));
+        setPagination({
+          page,
+          limit,
+          total: results.products.length,
+          totalPages,
+        });
+        setSearchReply(results.reply);
+        return;
+      }
+
+      const result = await fetchProductsPage({ page, limit: pageSize });
       if (currentRequest !== requestId.current) return;
-      setProducts(results.products);
-      setSearchReply(results.reply);
+
+      const totalPages = Math.max(1, result.pagination.totalPages);
+      if (pageSize !== "all" && page > totalPages) {
+        setPage(totalPages);
+        return;
+      }
+
+      setProducts(result.items);
+      setPagination({ ...result.pagination, totalPages });
+      setSearchReply(null);
     } catch (error) {
       if (currentRequest !== requestId.current) return;
       setProducts([]);
+      setPagination({
+        page: 1,
+        limit: pageSize === "all" ? 1 : pageSize,
+        total: 0,
+        totalPages: 1,
+      });
       setLoadError(error instanceof Error ? error.message : "Could not load products. Please try again.");
     } finally {
       if (currentRequest === requestId.current) setIsLoading(false);
     }
-  }, [activeSearch]);
+  }, [activeSearch, page, pageSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -387,22 +444,23 @@ export function ProductListContainer() {
           </Text>
         </div>
 
-        <Button onClick={openCreateModal} disabled={categories.length === 0}>
-          Add product
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <ProductBulkUpload onUploaded={refreshProducts} />
+          <Button onClick={openCreateModal} disabled={categories.length === 0}>
+            Add product
+          </Button>
+        </div>
       </div>
 
       <div className={activeSearch && isAssistantOpen ? "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]" : "grid min-w-0 gap-6"}>
       <div className="min-w-0 space-y-6">
-      <ProductSearchForm onSearch={(params) => {
-        setActiveSearch(params);
-        setIsAssistantOpen(Boolean(params));
-        setSearchReply(null);
-        if (params) {
-          setIsLoading(true);
-          setLoadError(null);
-        }
-      }} isLoading={isLoading} />
+      <ProductSearchForm
+        key={activeSearch?.q ?? "all-products"}
+        id="product-main-search"
+        initialQuery={activeSearch?.q ?? ""}
+        onSearch={handleProductSearch}
+        isLoading={isLoading}
+      />
 
       {activeSearch ? <div className="flex items-center justify-between gap-3"><Text className="text-sm text-zinc-500">AI matches for “{activeSearch.q}”.</Text>{!isAssistantOpen ? <Button variant="secondary" onClick={() => setIsAssistantOpen(true)}>Show AI response</Button> : null}</div> : null}
 
@@ -681,10 +739,20 @@ export function ProductListContainer() {
         </>
       )}
 
-      {products.length > 0 && !isLoading ? (
-        <Text className="text-sm text-zinc-500">
-          Showing {products.length} product{products.length === 1 ? "" : "s"}
-        </Text>
+      {!isLoading ? (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          }}
+          rangeStart={pagination.total === 0 ? 0 : startIndex + 1}
+          rangeEnd={Math.min(startIndex + products.length, pagination.total)}
+          total={pagination.total}
+        />
       ) : null}
       </div>
       </div>
@@ -695,6 +763,7 @@ export function ProductListContainer() {
           reply={searchReply}
           isLoading={isLoading}
           error={loadError}
+          onSearch={handleProductSearch}
           onClose={() => setIsAssistantOpen(false)}
           onRetry={() => void refreshProducts()}
         />
