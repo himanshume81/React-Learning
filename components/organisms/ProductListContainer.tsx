@@ -10,15 +10,21 @@ import { ActionMenu, ActionMenuItem } from "@/components/molecules/ActionMenu";
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { Modal } from "@/components/molecules/Modal";
+import { Pagination, type PageSize } from "@/components/molecules/Pagination";
 import { ProductSearchForm } from "@/components/molecules/ProductSearchForm";
-import { ProductSearchAssistant } from "@/components/organisms/ProductSearchAssistant";
+import { ProductBulkUpload } from "@/components/organisms/ProductBulkUpload";
+import {
+  ProductSearchAssistant,
+  type ProductAssistantMessage,
+} from "@/components/organisms/ProductSearchAssistant";
 import { ApiError } from "@/lib/api-client";
 import {
+  bulkDeleteProducts,
   createProduct,
   deleteProduct,
   fetchCategories,
   fetchProductById,
-  fetchProducts,
+  fetchProductsPage,
   formatRecordId,
   searchProducts,
   type ProductSearchParams,
@@ -98,10 +104,20 @@ export function ProductListContainer() {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(10);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  });
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeSearch, setActiveSearch] = useState<ProductSearchParams | null>(null);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [searchReply, setSearchReply] = useState<string | null>(null);
+  const [assistantMessages, setAssistantMessages] = useState<ProductAssistantMessage[]>([]);
+  const assistantMessageId = useRef(0);
+  const activeAssistantMessageId = useRef<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const requestId = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,9 +126,13 @@ export function ProductListContainer() {
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [form, setForm] = useState<ProductInput>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const startIndex = (pagination.page - 1) * pagination.limit;
 
   function readFileAsDataUrl(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -136,26 +156,111 @@ export function ProductListContainer() {
     setCategories(await fetchCategories());
   }
 
+  function handleProductSearch(params: ProductSearchParams | null) {
+    setActiveSearch(params);
+    setPage(1);
+    setIsAssistantOpen(Boolean(params));
+    if (params) {
+      const messageId = ++assistantMessageId.current;
+      activeAssistantMessageId.current = messageId;
+      setAssistantMessages((messages) => [
+        ...messages,
+        { id: messageId, query: params.q, status: "loading" },
+      ]);
+      setIsLoading(true);
+      setLoadError(null);
+    }
+  }
+
   const refreshProducts = useCallback(async () => {
     const currentRequest = ++requestId.current;
     setIsLoading(true);
     setLoadError(null);
 
     try {
-      const results = activeSearch
-        ? await searchProducts(activeSearch)
-        : { products: await fetchProducts(), reply: null };
+      if (activeSearch) {
+        const messageId = activeAssistantMessageId.current;
+        if (messageId !== null) {
+          setAssistantMessages((messages) =>
+            messages.map((message) =>
+              message.id === messageId
+                ? { ...message, status: "loading", error: undefined }
+                : message
+            )
+          );
+        }
+
+        const results = await searchProducts(activeSearch);
+        if (currentRequest !== requestId.current) return;
+
+        const limit = pageSize === "all" ? results.products.length || 1 : pageSize;
+        const totalPages = Math.max(1, Math.ceil(results.products.length / limit));
+        if (page > totalPages) {
+          setPage(totalPages);
+          return;
+        }
+
+        const offset = (page - 1) * limit;
+        setProducts(results.products.slice(offset, offset + limit));
+        setPagination({
+          page,
+          limit,
+          total: results.products.length,
+          totalPages,
+        });
+        const reply = results.reply ?? (
+          results.products.length > 0
+            ? `I found ${results.products.length} matching product${results.products.length === 1 ? "" : "s"}. Explore the results below or view them in the product list.`
+            : "No matching products found. Try a different description, brand, or price range."
+        );
+        if (messageId !== null) {
+          setAssistantMessages((messages) =>
+            messages.map((message) =>
+              message.id === messageId
+                ? { ...message, reply, status: "complete", error: undefined }
+                : message
+            )
+          );
+        }
+        return;
+      }
+
+      const result = await fetchProductsPage({ page, limit: pageSize });
       if (currentRequest !== requestId.current) return;
-      setProducts(results.products);
-      setSearchReply(results.reply);
+
+      const totalPages = Math.max(1, result.pagination.totalPages);
+      if (pageSize !== "all" && page > totalPages) {
+        setPage(totalPages);
+        return;
+      }
+
+      setProducts(result.items);
+      setPagination({ ...result.pagination, totalPages });
     } catch (error) {
       if (currentRequest !== requestId.current) return;
+      const errorMessage = error instanceof Error ? error.message : "Could not load products. Please try again.";
       setProducts([]);
-      setLoadError(error instanceof Error ? error.message : "Could not load products. Please try again.");
+      setPagination({
+        page: 1,
+        limit: pageSize === "all" ? 1 : pageSize,
+        total: 0,
+        totalPages: 1,
+      });
+      setLoadError(errorMessage);
+      const messageId = activeAssistantMessageId.current;
+      if (activeSearch && messageId !== null) {
+        setAssistantMessages((messages) =>
+          messages.map((message) =>
+            message.id === messageId
+              ? { ...message, error: errorMessage, status: "error" }
+              : message
+          )
+        );
+      }
     } finally {
       if (currentRequest === requestId.current) setIsLoading(false);
     }
-  }, [activeSearch]);
+  }, [activeSearch, page, pageSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -340,6 +445,11 @@ export function ProductListContainer() {
     try {
       await deleteProduct(deleteTarget.id);
       showToast("Product deleted successfully.");
+      setSelectedProductIds((selectedIds) => {
+        const nextIds = new Set(selectedIds);
+        nextIds.delete(deleteTarget.id);
+        return nextIds;
+      });
       setDeleteTarget(null);
       await Promise.all([refreshCategories(), refreshProducts()]);
     } catch (error) {
@@ -366,6 +476,53 @@ export function ProductListContainer() {
     }
   }
 
+  function toggleProductSelection(productId: string) {
+    setSelectedProductIds((selectedIds) => {
+      const nextIds = new Set(selectedIds);
+      if (nextIds.has(productId)) nextIds.delete(productId);
+      else nextIds.add(productId);
+      return nextIds;
+    });
+  }
+
+  function toggleCurrentPageSelection() {
+    const currentPageIds = products.map((product) => product.id);
+    const areAllSelected =
+      currentPageIds.length > 0 &&
+      currentPageIds.every((productId) => selectedProductIds.has(productId));
+
+    setSelectedProductIds((selectedIds) => {
+      const nextIds = new Set(selectedIds);
+      currentPageIds.forEach((productId) => {
+        if (areAllSelected) nextIds.delete(productId);
+        else nextIds.add(productId);
+      });
+      return nextIds;
+    });
+  }
+
+  async function handleBulkDeleteConfirm() {
+    if (selectedProductIds.size === 0 || isBulkDeleting) return;
+
+    setIsBulkDeleting(true);
+    try {
+      await bulkDeleteProducts(Array.from(selectedProductIds));
+      const deletedCount = selectedProductIds.size;
+      setSelectedProductIds(new Set());
+      setIsBulkDeleteOpen(false);
+      showToast(`${deletedCount} product${deletedCount === 1 ? "" : "s"} deleted successfully.`);
+      await Promise.all([refreshCategories(), refreshProducts()]);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Products could not be deleted.", "error");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }
+
+  const currentPageIsSelected =
+    products.length > 0 &&
+    products.every((product) => selectedProductIds.has(product.id));
+
   return (
     <section className="space-y-6">
       <input
@@ -387,22 +544,28 @@ export function ProductListContainer() {
           </Text>
         </div>
 
-        <Button onClick={openCreateModal} disabled={categories.length === 0}>
-          Add product
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          {selectedProductIds.size > 0 ? (
+            <Button variant="danger" onClick={() => setIsBulkDeleteOpen(true)}>
+              Delete selected ({selectedProductIds.size})
+            </Button>
+          ) : null}
+          <ProductBulkUpload onUploaded={refreshProducts} />
+          <Button onClick={openCreateModal} disabled={categories.length === 0}>
+            Add product
+          </Button>
+        </div>
       </div>
 
       <div className={activeSearch && isAssistantOpen ? "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]" : "grid min-w-0 gap-6"}>
       <div className="min-w-0 space-y-6">
-      <ProductSearchForm onSearch={(params) => {
-        setActiveSearch(params);
-        setIsAssistantOpen(Boolean(params));
-        setSearchReply(null);
-        if (params) {
-          setIsLoading(true);
-          setLoadError(null);
-        }
-      }} isLoading={isLoading} />
+      <ProductSearchForm
+        key={activeSearch?.q ?? "all-products"}
+        id="product-main-search"
+        initialQuery={activeSearch?.q ?? ""}
+        onSearch={handleProductSearch}
+        isLoading={isLoading}
+      />
 
       {activeSearch ? <div className="flex items-center justify-between gap-3"><Text className="text-sm text-zinc-500">AI matches for “{activeSearch.q}”.</Text>{!isAssistantOpen ? <Button variant="secondary" onClick={() => setIsAssistantOpen(true)}>Show AI response</Button> : null}</div> : null}
 
@@ -474,6 +637,14 @@ export function ProductListContainer() {
                         {product.sku}
                       </Text>
                     </div>
+                    <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedProductIds.has(product.id)}
+                      onChange={() => toggleProductSelection(product.id)}
+                      aria-label={`Select ${product.name}`}
+                      className="h-4 w-4 rounded border-zinc-300 accent-red-600"
+                    />
                     <ActionMenu label={`Actions for ${product.name}`}>
                       <Link
                         href={`/products/${product.id}`}
@@ -495,6 +666,7 @@ export function ProductListContainer() {
                         Delete
                       </ActionMenuItem>
                     </ActionMenu>
+                    </div>
                   </div>
 
                   <Text className="mt-3 text-sm text-zinc-500">
@@ -546,6 +718,16 @@ export function ProductListContainer() {
           <table className="w-full min-w-[1100px] text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
+                <th className="w-12 px-4 py-3 font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={currentPageIsSelected}
+                    onChange={toggleCurrentPageSelection}
+                    disabled={products.length === 0 || isLoading}
+                    aria-label="Select all products on this page"
+                    className="h-4 w-4 rounded border-zinc-300 accent-red-600"
+                  />
+                </th>
                 <th className="px-4 py-3 font-semibold">ID</th>
                 <th className="px-4 py-3 font-semibold">Product</th>
                 <th className="px-4 py-3 font-semibold">SKU</th>
@@ -563,6 +745,9 @@ export function ProductListContainer() {
                     key={index}
                     className="border-b border-zinc-200 last:border-0 dark:border-zinc-800"
                   >
+                    <td className="px-4 py-3">
+                      <Skeleton className="h-4 w-4" />
+                    </td>
                     <td className="px-4 py-3">
                       <Skeleton className="h-4 w-20" />
                     </td>
@@ -594,8 +779,17 @@ export function ProductListContainer() {
                 products.map((product) => (
                   <tr
                     key={product.id}
-                    className="border-b border-zinc-200 last:border-0 dark:border-zinc-800"
+                    className={`border-b border-zinc-200 last:border-0 dark:border-zinc-800 ${selectedProductIds.has(product.id) ? "bg-red-50/60 dark:bg-red-950/20" : ""}`}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedProductIds.has(product.id)}
+                        onChange={() => toggleProductSelection(product.id)}
+                        aria-label={`Select ${product.name}`}
+                        className="h-4 w-4 rounded border-zinc-300 accent-red-600"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/products/${product.id}`}
@@ -681,20 +875,29 @@ export function ProductListContainer() {
         </>
       )}
 
-      {products.length > 0 && !isLoading ? (
-        <Text className="text-sm text-zinc-500">
-          Showing {products.length} product{products.length === 1 ? "" : "s"}
-        </Text>
+      {!isLoading ? (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          }}
+          rangeStart={pagination.total === 0 ? 0 : startIndex + 1}
+          rangeEnd={Math.min(startIndex + products.length, pagination.total)}
+          total={pagination.total}
+        />
       ) : null}
       </div>
       </div>
       {activeSearch && isAssistantOpen ? (
         <ProductSearchAssistant
-          query={activeSearch.q}
+          messages={assistantMessages}
           products={products}
-          reply={searchReply}
           isLoading={isLoading}
-          error={loadError}
+          onSearch={handleProductSearch}
           onClose={() => setIsAssistantOpen(false)}
           onRetry={() => void refreshProducts()}
         />
@@ -985,6 +1188,19 @@ export function ProductListContainer() {
         confirmLabel="Delete product"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
+      />
+
+      <ConfirmDialog
+        open={isBulkDeleteOpen}
+        title="Delete selected products"
+        message={`Delete ${selectedProductIds.size} selected product${selectedProductIds.size === 1 ? "" : "s"}? This action cannot be undone.`}
+        confirmLabel="Delete selected"
+        isPending={isBulkDeleting}
+        danger
+        onCancel={() => {
+          if (!isBulkDeleting) setIsBulkDeleteOpen(false);
+        }}
+        onConfirm={handleBulkDeleteConfirm}
       />
     </section>
   );

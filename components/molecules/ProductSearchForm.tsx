@@ -6,6 +6,10 @@ import type { ProductSearchParams } from "@/lib/catalog-api";
 type Props = {
   onSearch: (params: ProductSearchParams | null) => void;
   isLoading: boolean;
+  initialQuery?: string;
+  id?: string;
+  compact?: boolean;
+  clearAfterSubmit?: boolean;
 };
 
 export function ProductSearchForm(props: Props) {

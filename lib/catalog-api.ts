@@ -36,6 +36,12 @@ type ProductListResponse =
       data?: RawProduct[];
       items?: RawProduct[];
       products?: RawProduct[];
+      pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
     };
 
 function fromApiStatus(status?: unknown): CategoryStatus {
@@ -295,6 +301,54 @@ export async function fetchProducts(categoryId?: string): Promise<Product[]> {
   return rawProducts.map((product) => toProduct(product, categories));
 }
 
+export async function fetchProductsPage(query: {
+  page: number;
+  limit: number | "all";
+}) {
+  const categories = await fetchCategories();
+
+  async function fetchPage(page: number) {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(query.limit === "all" ? 100 : query.limit),
+    });
+    const payload = await apiFetch<ProductListResponse>(`/products?${params}`, {
+      auth: true,
+    });
+    const items = normalizeProductListResponse(payload);
+    const pagination = Array.isArray(payload) ? undefined : payload.pagination;
+
+    return {
+      items: items.map((product) => toProduct(product, categories)),
+      pagination: pagination ?? {
+        page: 1,
+        limit: items.length || 1,
+        total: items.length,
+        totalPages: 1,
+      },
+    };
+  }
+
+  const result = await fetchPage(query.limit === "all" ? 1 : query.page);
+  if (query.limit !== "all") return result;
+
+  const items = [...result.items];
+  for (let page = 2; page <= result.pagination.totalPages; page += 1) {
+    const nextPage = await fetchPage(page);
+    items.push(...nextPage.items);
+  }
+
+  return {
+    items,
+    pagination: {
+      page: 1,
+      limit: items.length || 1,
+      total: items.length,
+      totalPages: 1,
+    },
+  };
+}
+
 export type ProductSearchParams = {
   q: string;
 };
@@ -371,6 +425,17 @@ export async function uploadProductImage(file: File): Promise<string> {
   return raw.url ?? raw.secure_url ?? raw.image ?? raw.data?.url ?? "";
 }
 
+export async function bulkUploadProducts(file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  await apiFetch<unknown>("/products/bulk-upload", {
+    method: "POST",
+    body: formData,
+    auth: true,
+  });
+}
+
 export async function uploadProductImages(files: File[]): Promise<string[]> {
   const uploadedImages = await Promise.all(files.map(uploadProductImage));
   return uploadedImages.filter((imageUrl) => Boolean(imageUrl));
@@ -428,6 +493,19 @@ export async function updateProduct(
 export async function deleteProduct(id: string): Promise<void> {
   await apiFetch<void>(`/products/${id}`, {
     method: "DELETE",
+    auth: true,
+  });
+}
+
+export async function bulkDeleteProducts(ids: string[]): Promise<void> {
+  await apiFetch<void>("/products/bulk", {
+    method: "DELETE",
+    body: {
+      ids: ids.map((id) => {
+        const numericId = Number(id);
+        return Number.isFinite(numericId) ? numericId : id;
+      }),
+    },
     auth: true,
   });
 }

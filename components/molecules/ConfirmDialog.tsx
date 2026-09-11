@@ -8,6 +8,7 @@ type ConfirmDialogProps = {
   message: string;
   confirmLabel?: string;
   isPending?: boolean;
+  danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -18,6 +19,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   isPending = false,
+  danger = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -28,7 +30,7 @@ export function ConfirmDialog({
         <Button variant="ghost" onClick={onCancel} disabled={isPending}>
           Cancel
         </Button>
-        <Button onClick={onConfirm} disabled={isPending}>
+        <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} disabled={isPending}>
           {isPending ? "Deleting..." : confirmLabel}
         </Button>
       </div>
