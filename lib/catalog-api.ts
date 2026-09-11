@@ -295,6 +295,30 @@ export async function fetchProducts(categoryId?: string): Promise<Product[]> {
   return rawProducts.map((product) => toProduct(product, categories));
 }
 
+export type ProductSearchParams = {
+  q: string;
+};
+
+export async function searchProducts(params: ProductSearchParams): Promise<{
+  products: Product[];
+  reply: string | null;
+}> {
+  const query = new URLSearchParams({ q: params.q.trim() });
+
+  const [payload, categories] = await Promise.all([
+    apiFetch<ProductListResponse & { reply?: string; message?: string; answer?: string }>(`/products/search?${query}`, {
+      method: "GET",
+      auth: true,
+    }),
+    fetchCategories(),
+  ]);
+  const reply = payload.reply ?? payload.answer ?? payload.message;
+  return {
+    products: normalizeProductListResponse(payload).map((product) => toProduct(product, categories)),
+    reply: typeof reply === "string" && reply.trim() ? reply : null,
+  };
+}
+
 export async function fetchProductById(id: string): Promise<Product | null> {
   try {
     const [rawProduct, categories] = await Promise.all([

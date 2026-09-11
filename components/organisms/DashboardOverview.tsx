@@ -1,6 +1,5 @@
 "use client";
 
-import { AiChat } from "@/components/organisms/AiChat";
 import { KPICard } from "@/components/molecules/KPICard";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
@@ -65,8 +64,6 @@ export function DashboardOverview() {
       </div>
 
       <RecentActivity items={activity} isLoading={isLoading} />
-
-      <AiChat />
     </section>
   );
 }
