@@ -10,13 +10,15 @@ import { ActionMenu, ActionMenuItem } from "@/components/molecules/ActionMenu";
 import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { Modal } from "@/components/molecules/Modal";
+import { Pagination, type PageSize } from "@/components/molecules/Pagination";
+import { ProductBulkUpload } from "@/components/organisms/ProductBulkUpload";
 import { ApiError } from "@/lib/api-client";
 import {
   createProduct,
   deleteProduct,
   fetchCategories,
   fetchProductById,
-  fetchProducts,
+  fetchProductsPage,
   formatRecordId,
   uploadProductImages,
   updateProduct,
@@ -25,7 +27,7 @@ import { useToast } from "@/context/ToastContext";
 import type { Category } from "@/types/category";
 import type { Product, ProductInput } from "@/types/product";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 const emptyForm: ProductInput = {
   name: "",
@@ -94,6 +96,10 @@ export function ProductListContainer() {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(10);
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const productRequestRef = useRef(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
@@ -105,6 +111,8 @@ export function ProductListContainer() {
   const [form, setForm] = useState<ProductInput>(emptyForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+
+  const startIndex = (pagination.page - 1) * pagination.limit;
 
   function readFileAsDataUrl(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -128,25 +136,54 @@ export function ProductListContainer() {
     setCategories(await fetchCategories());
   }
 
-  async function refreshProducts(categoryId = selectedCategoryId) {
+  const refreshProducts = useCallback(async () => {
+    const requestId = ++productRequestRef.current;
     setIsLoading(true);
 
     try {
-      setProducts(
-        await fetchProducts(categoryId === "all" ? undefined : categoryId)
-      );
+      const result = await fetchProductsPage({
+        page,
+        limit: pageSize,
+        categoryId: selectedCategoryId === "all" ? undefined : selectedCategoryId,
+      });
+      if (requestId !== productRequestRef.current) return;
+      const lastPage = Math.max(1, result.pagination.totalPages);
+      if (pageSize !== "all" && page > lastPage) {
+        setPage(lastPage);
+        return;
+      }
+      setProducts(result.items);
+      setPagination({ ...result.pagination, totalPages: lastPage });
     } finally {
-      setIsLoading(false);
+      if (requestId === productRequestRef.current) setIsLoading(false);
     }
-  }
+  }, [page, pageSize, selectedCategoryId]);
 
   useEffect(() => {
-    Promise.all([refreshCategories(), refreshProducts("all")]);
-  }, []);
+    let ignore = false;
+    fetchCategories().then((result) => {
+      if (!ignore) setCategories(result);
+    }).catch((error) => {
+      if (!ignore) showToast(error instanceof Error ? error.message : "Could not load categories.", "error");
+    });
+    return () => { ignore = true; };
+  }, [showToast]);
 
   useEffect(() => {
-    refreshProducts(selectedCategoryId);
-  }, [selectedCategoryId]);
+    let ignore = false;
+    void Promise.resolve().then(async () => {
+      if (ignore) return;
+      try {
+        await refreshProducts();
+      } catch (error) {
+        if (!ignore) showToast(error instanceof Error ? error.message : "Could not load products.", "error");
+      }
+    });
+    return () => {
+      ignore = true;
+      productRequestRef.current += 1;
+    };
+  }, [refreshProducts, showToast]);
 
   function openCreateModal() {
     setEditingProduct(null);
@@ -361,9 +398,16 @@ export function ProductListContainer() {
           </Text>
         </div>
 
-        <Button onClick={openCreateModal} disabled={categories.length === 0}>
-          Add product
-        </Button>
+        <div className="flex flex-wrap gap-3">
+          <ProductBulkUpload
+            onUploaded={async () => {
+              await Promise.all([refreshCategories(), refreshProducts()]);
+            }}
+          />
+          <Button onClick={openCreateModal} disabled={categories.length === 0}>
+            Add product
+          </Button>
+        </div>
       </div>
 
       <div className="max-w-xs">
@@ -372,7 +416,10 @@ export function ProductListContainer() {
         </Text>
         <Select
           value={selectedCategoryId}
-          onChange={(event) => setSelectedCategoryId(event.target.value)}
+          onChange={(event) => {
+            setSelectedCategoryId(event.target.value);
+            setPage(1);
+          }}
         >
           <option value="all">All categories</option>
           {categories.map((category) => (
@@ -652,11 +699,20 @@ export function ProductListContainer() {
         </>
       )}
 
-      {products.length > 0 && !isLoading ? (
-        <Text className="text-sm text-zinc-500">
-          Showing {products.length} product{products.length === 1 ? "" : "s"}
-          {selectedCategoryId === "all" ? "" : " in the selected category"}
-        </Text>
+      {!isLoading ? (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          }}
+          rangeStart={products.length === 0 ? 0 : startIndex + 1}
+          rangeEnd={Math.min(startIndex + products.length, pagination.total)}
+          total={pagination.total}
+        />
       ) : null}
 
       <Modal

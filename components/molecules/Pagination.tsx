@@ -8,6 +8,7 @@ export const PAGE_SIZE_OPTIONS: { label: string; value: PageSize }[] = [
   { label: "10", value: 10 },
   { label: "25", value: 25 },
   { label: "50", value: 50 },
+  { label: "100", value: 100 },
   { label: "All", value: "all" },
 ];
 
@@ -25,9 +26,7 @@ type PaginationProps = {
 const arrowButtonClassName =
   "flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-300 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:disabled:text-zinc-700";
 
-// Memoized: page/totalPages/pageSize/range only change once the debounced
-// search/filter fetch resolves, so this should bail out while the parent
-// re-renders on every keystroke of the (unrelated) search input.
+// Shared pagination controls for catalog and management lists.
 export const Pagination = memo(function Pagination({
   page,
   totalPages,
@@ -77,6 +76,23 @@ export const Pagination = memo(function Pagination({
         >
           ‹
         </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">Page</span>
+          <Select
+            aria-label="Go to page"
+            value={page}
+            disabled={totalPages <= 1}
+            onChange={(event) => onPageChange(Number(event.target.value))}
+            className="w-auto min-w-16"
+          >
+            {Array.from({ length: Math.max(1, totalPages) }, (_, index) => (
+              <option key={index + 1} value={index + 1}>{index + 1}</option>
+            ))}
+          </Select>
+          <span className="whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">
+            of {Math.max(1, totalPages)}
+          </span>
+        </div>
         <button
           type="button"
           aria-label="Next page"
