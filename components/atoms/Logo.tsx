@@ -2,8 +2,11 @@ import Link from "next/link";
 
 export function Logo() {
   return (
-    <Link href="/" className="text-lg font-semibold tracking-tight">
-      Home
+    <Link
+      href="/dashboard"
+      className="text-[22px] font-semibold tracking-tight text-[#4a942e]"
+    >
+      SmartShopping
     </Link>
   );
 }

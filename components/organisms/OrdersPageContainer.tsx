@@ -17,12 +17,20 @@ import { fetchProducts } from "@/lib/catalog-api";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { createOrder, fetchOrders, updateOrderStatus } from "@/lib/orders-api";
 import { fetchUsers } from "@/lib/users-api";
-import { ORDER_STATUS_FLOW, type Order, type OrderStatus } from "@/types/order";
+import type { Order, OrderStatus } from "@/types/order";
 import type { Product } from "@/types/product";
 import type { User } from "@/types/user";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const ALL_PAGE_SIZE = 1000;
+
+const ORDER_TABS: Array<{ label: string; value: OrderStatus | "all" }> = [
+  { label: "All Orders", value: "all" },
+  { label: "Pending", value: "pending" },
+  { label: "Processing", value: "processing" },
+  { label: "Confirmed", value: "confirmed" },
+  { label: "Completed", value: "completed" },
+];
 
 type OrderItemForm = {
   productId: string;
@@ -317,13 +325,6 @@ export function OrdersPageContainer() {
     }
   }
 
-  const statusOptions = useMemo(() => {
-    const extraStatuses = Array.from(
-      new Set(orders.map((order) => order.status).filter((s) => !ORDER_STATUS_FLOW.includes(s)))
-    ).sort();
-    return [...ORDER_STATUS_FLOW, ...extraStatuses];
-  }, [orders]);
-
   const filteredOrders = useMemo(() => {
     const term = debouncedSearch.trim().toLowerCase();
 
@@ -362,6 +363,32 @@ export function OrdersPageContainer() {
         <Button onClick={() => void openCreateOrderModal()}>Create order</Button>
       </div>
 
+      <div
+        className="flex min-w-0 gap-8 overflow-x-auto border-b border-[#e1e8ea] sm:gap-11"
+        role="tablist"
+        aria-label="Filter orders by status"
+      >
+        {ORDER_TABS.map((tab) => {
+          const active = status === tab.value;
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setStatus(tab.value)}
+              className={`h-11 shrink-0 border-b-2 px-1 text-sm font-medium transition-colors sm:text-base ${
+                active
+                  ? "border-[#4a942e] text-[#1f2124]"
+                  : "border-transparent text-[#6b7f89] hover:text-[#1f2124]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className={aiQuery && isAssistantOpen ? "grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]" : "grid min-w-0 gap-6"}>
       <div className="min-w-0 space-y-6">
       <AiSearchForm
@@ -387,19 +414,6 @@ export function OrdersPageContainer() {
           aria-label="Search orders"
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-foreground focus:ring-2 focus:ring-foreground/20 sm:max-w-xs dark:border-zinc-700 dark:bg-zinc-950"
         />
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value as OrderStatus | "all")}
-          aria-label="Filter orders by status"
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-foreground focus:ring-2 focus:ring-foreground/20 sm:max-w-48 dark:border-zinc-700 dark:bg-zinc-950"
-        >
-          <option value="all">All statuses</option>
-          {statusOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
       </div>
 
       {!isLoading && displayedOrders.length === 0 ? (

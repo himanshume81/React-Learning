@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/templates/AppLayout";
 import { AuthGuard } from "@/components/templates/AuthGuard";
 
 export const metadata: Metadata = {
-  title: "Customers | User Management Dashboard",
+  title: "Customers | SmartShopping Admin",
 };
 
 export default function CustomersPage() {

@@ -1,5 +1,4 @@
 import { Logo } from "@/components/atoms/Logo";
-import { NavLink } from "@/components/molecules/NavLink";
 import { ThemeToggle } from "@/components/molecules/ThemeToggle";
 import { UserMenu } from "@/components/molecules/UserMenu";
 
@@ -9,7 +8,7 @@ type HeaderProps = {
 
 export function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
+    <header className="flex h-[59px] items-center justify-between border-b border-[#e8ede8] px-5 sm:px-7 lg:px-[30px] dark:border-zinc-800">
       <div className="flex items-center gap-3">
         {onMenuClick && (
           <button
@@ -21,7 +20,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             ☰
           </button>
         )}
-        <Logo />
+        <span className="md:hidden"><Logo /></span>
       </div>
 
       <div className="flex items-center gap-3">
