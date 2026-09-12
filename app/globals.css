@@ -23,5 +23,193 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .zopping-page {
+    color: #1f2124;
+  }
+
+  .zopping-page h1,
+  .zopping-page-heading h1 {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 34px;
+  }
+
+  .zopping-page-heading {
+    display: flex;
+    min-height: 34px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .zopping-search {
+    height: 34px;
+    width: 115px;
+    border: 1px solid #e8ede8;
+    border-radius: 3px;
+    background: #fff;
+    padding: 0 12px;
+    font-size: 10px;
+    color: #1f2124;
+    outline: none;
+  }
+
+  .zopping-search::placeholder { color: #6b7580; }
+  .zopping-search:focus { border-color: #4a942e; }
+
+  .zopping-button {
+    height: 34px;
+    border-radius: 3px;
+    background: #4a942e;
+    padding: 0 14px;
+    font-size: 10px;
+    font-weight: 500;
+    color: white;
+    transition: background-color 150ms ease;
+  }
+
+  .zopping-button:hover { background: #3f7f27; }
+
+  .zopping-tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 36px;
+    height: 44px;
+    overflow-x: auto;
+  }
+
+  .zopping-tabs button {
+    height: 44px;
+    flex: none;
+    border-bottom: 2px solid transparent;
+    padding: 0 0 13px;
+    font-size: 10px;
+    color: #6b7580;
+  }
+
+  .zopping-tabs button.active {
+    border-color: #4a942e;
+    color: #4a942e;
+    font-weight: 500;
+  }
+
+  .zopping-table-wrap {
+    margin-top: 40px;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .zopping-tabs + .zopping-table-wrap { margin-top: 4px; }
+
+  .zopping-table {
+    width: 100%;
+    min-width: 760px;
+    table-layout: fixed;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
+  .zopping-table th {
+    height: 44px;
+    border-bottom: 1px solid #e8ede8;
+    padding: 0 6px;
+    font-size: 9.5px;
+    font-weight: 500;
+    color: #6b7580;
+  }
+
+  .zopping-table td {
+    height: 44px;
+    border-bottom: 1px solid #e8ede8;
+    padding: 0 6px;
+    font-size: 10px;
+    font-weight: 400;
+    color: #1f2124;
+    vertical-align: middle;
+  }
+
+  .zopping-actions { padding: 8px; color: #6b7580; }
+  .zopping-image-placeholder { color: #6b7580; font-size: 12px; }
+  .zopping-no-results { padding: 24px 6px; font-size: 11px; color: #6b7580; }
+
+  .zopping-empty {
+    display: grid;
+    min-height: 330px;
+    place-content: center;
+    justify-items: center;
+    gap: 12px;
+    color: #6b7580;
+    font-size: 11px;
+  }
+
+  .zopping-empty span { font-size: 22px; }
+  .zopping-skeleton-table { margin-top: 40px; overflow: hidden; }
+  .zopping-skeleton-heading,
+  .zopping-skeleton-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: center;
+    gap: 28px;
+    height: 44px;
+    border-bottom: 1px solid #e8ede8;
+  }
+  .zopping-skeleton-line {
+    display: block;
+    width: 58%;
+    height: 7px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #eef1ee 25%, #f8faf8 50%, #eef1ee 75%);
+    background-size: 200% 100%;
+    animation: zopping-skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  .zopping-skeleton-line.wide { width: 82%; }
+
+  @keyframes zopping-skeleton-shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zopping-skeleton-line { animation: none; }
+  }
+
+  .zopping-settings-page { max-width: 840px; }
+  .zopping-settings-page h2 { margin-top: 38px; font-size: 15px; font-weight: 600; }
+  .zopping-channel-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+  .zopping-channel-grid button,
+  .zopping-setting-card { border: 1px solid #e8ede8; border-radius: 4px; padding: 18px; text-align: left; font-size: 11px; }
+  .zopping-setting-card { margin-top: 12px; background: #fafbfa; }
+  .zopping-setting-card strong { font-size: 11px; font-weight: 500; }
+  .zopping-setting-card p { margin-top: 7px; color: #6b7580; font-size: 10px; }
+  .zopping-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin-top: 34px; }
+  .zopping-form label { display: grid; gap: 8px; font-size: 10px; color: #6b7580; }
+  .zopping-form input,
+  .zopping-form select,
+  .zopping-form textarea {
+    border: 1px solid #e8ede8;
+    border-radius: 3px;
+    background: white;
+    padding: 0 10px;
+    color: #1f2124;
+    outline: none;
+  }
+  .zopping-form input,
+  .zopping-form select { height: 36px; }
+  .zopping-form textarea { padding-block: 10px; resize: vertical; }
+  .zopping-form input:focus,
+  .zopping-form select:focus,
+  .zopping-form textarea:focus { border-color: #4a942e; box-shadow: 0 0 0 2px rgb(74 148 46 / 12%); }
+  .zopping-form .zopping-button { align-self: end; justify-self: start; }
+}
+
+@media (max-width: 767px) {
+  .zopping-page-heading { align-items: center; }
+  .zopping-page-heading > div { flex-wrap: wrap; justify-content: flex-end; }
+  .zopping-table-wrap { margin-top: 24px; }
+  .zopping-channel-grid,
+  .zopping-form { grid-template-columns: 1fr; }
 }

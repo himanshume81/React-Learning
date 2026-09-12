@@ -15,10 +15,6 @@ export function DashboardOverview() {
   const [activity, setActivity] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  console.log(
-    'API BASE URL:',
-    process.env.NEXT_PUBLIC_API_BASE_URL
-  );
   useEffect(() => {
     let ignore = false;
 

@@ -536,7 +536,7 @@ export function ProductListContainer() {
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <Text as="h1" className="text-2xl font-semibold">
+          <Text as="h1" className="text-[22px] font-semibold text-[#1f2124] dark:text-zinc-100">
             Products
           </Text>
           <Text className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
@@ -714,7 +714,7 @@ export function ProductListContainer() {
             )}
           </div>
 
-          <div className="hidden overflow-x-auto rounded-xl border border-zinc-200 md:block dark:border-zinc-800">
+          <div className="hidden overflow-x-auto border-y border-[#e8ede8] md:block dark:border-zinc-800">
           <table className="w-full min-w-[1100px] text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">

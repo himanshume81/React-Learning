@@ -4,7 +4,7 @@ import { AuthGuard } from "@/components/templates/AuthGuard";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Dashboard | User Management Dashboard",
+  title: "Dashboard | SmartShopping Admin",
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
