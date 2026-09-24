@@ -42,6 +42,7 @@ const navigation: NavSection[] = [
     label: "Catalogue",
     children: [
       { href: "/products", label: "Products" },
+      { href: "/products/ai-search", label: "AI Product Search" },
       { href: "/categories", label: "Categories" },
       { href: "/brands", label: "Brands" },
       { href: "/tags", label: "Tags" },
@@ -178,7 +179,10 @@ function SidebarNav({ pathname, onNavigate }: SidebarNavProps) {
           );
         }
 
-        const active = children.some((item) => routeIsActive(pathname, item.href));
+        const activeChildHref = children
+          .filter((item) => routeIsActive(pathname, item.href))
+          .sort((first, second) => second.href.length - first.href.length)[0]?.href;
+        const active = Boolean(activeChildHref);
         const isExpanded = expanded === section.label;
         return (
           <div key={section.label}>
@@ -204,7 +208,7 @@ function SidebarNav({ pathname, onNavigate }: SidebarNavProps) {
             {isExpanded ? (
               <div className="py-1.5">
                 {children.map((item) => {
-                  const childActive = routeIsActive(pathname, item.href);
+                  const childActive = item.href === activeChildHref;
                   return (
                     <Link
                       key={item.href}
