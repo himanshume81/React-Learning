@@ -6,7 +6,7 @@ export function Logo() {
       href="/dashboard"
       className="text-[22px] font-semibold tracking-tight text-[#4a942e]"
     >
-      SmartShopping
+      Home
     </Link>
   );
 }
