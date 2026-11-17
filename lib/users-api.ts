@@ -1,3 +1,4 @@
+import { normalizePermissions } from "@/lib/rbac/permissions";
 import { apiFetch } from "@/lib/api-client";
 import type { Activity, ActivityAction } from "@/types/activity";
 import type { User, UserInput, UserRole, UserStatus } from "@/types/user";
@@ -10,23 +11,27 @@ export type RawUser = {
   email: string;
   phoneNumber: string | null;
   role: UserRole;
+  roleId?: string | number | null;
+  roleName?: string | null;
+  permissions?: unknown;
   status: UserStatus;
   createdAt: string;
   updatedAt: string;
 };
 
 export function toUser(raw: RawUser): User {
-  const normalizedRole =
-    String(raw.role).toLowerCase() === "admin" ? "admin" : "user";
   const normalizedStatus =
-    String(raw.status).toLowerCase() === "inactive" ? "inactive" : "active";
+    String(raw.status).toLowerCase() === "active" ? "active" : "inactive";
 
   return {
     id: String(raw.id),
     name: raw.name,
     email: raw.email,
     phoneNumber: raw.phoneNumber,
-    role: normalizedRole,
+    role: raw.role,
+    roleId: raw.roleId == null ? null : String(raw.roleId),
+    roleName: raw.roleName ?? null,
+    permissions: normalizePermissions(raw.permissions),
     status: normalizedStatus,
     joinedAt: raw.createdAt,
   };

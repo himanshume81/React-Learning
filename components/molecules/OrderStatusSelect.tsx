@@ -1,3 +1,7 @@
+"use client";
+
+import { useAuth } from "@/context/AuthContext";
+import { can } from "@/lib/rbac/permissions";
 import { Badge } from "@/components/atoms/Badge";
 import { getAvailableOrderStatuses, type OrderStatus } from "@/types/order";
 
@@ -28,9 +32,11 @@ type OrderStatusSelectProps = {
 // order backward. Once there's nowhere forward left to go (completed, or a
 // status outside the managed flow), this renders a plain read-only badge.
 export function OrderStatusSelect({ status, onChange, disabled }: OrderStatusSelectProps) {
+  const { user } = useAuth();
+  const writable = can(user, "orders", "addEdit");
   const options = getAvailableOrderStatuses(status);
 
-  if (options.length <= 1) {
+  if (!writable || options.length <= 1) {
     return <Badge tone={badgeToneForOrderStatus(status)}>{status}</Badge>;
   }
 

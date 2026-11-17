@@ -1,5 +1,8 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { can } from "@/lib/rbac/permissions";
+import { Permission } from "@/components/templates/Permission";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
@@ -20,7 +23,7 @@ import { EmptyState } from "@/components/molecules/EmptyState";
 import { Modal } from "@/components/molecules/Modal";
 import type { Category, CategoryInput } from "@/types/category";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const emptyForm: CategoryInput = {
   name: "",
@@ -45,6 +48,7 @@ function validateCategory(input: CategoryInput): FormErrors {
 }
 
 export function CategoryManagementContainer() {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,21 +60,26 @@ export function CategoryManagementContainer() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [deleteError, setDeleteError] = useState("");
 
-  async function refreshCategories() {
+  const refreshCategories = useCallback(async () => {
     setIsLoading(true);
 
     try {
       setCategories(await fetchCategoriesWithCounts());
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not load categories.", "error");
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [showToast]);
 
   useEffect(() => {
-    refreshCategories();
-  }, []);
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshCategories();
+  }, [refreshCategories]);
 
   function openCreateModal() {
+    if (!can(user, "categories", "addEdit")) return;
     setEditingCategory(null);
     setForm(emptyForm);
     setErrors({});
@@ -78,6 +87,7 @@ export function CategoryManagementContainer() {
   }
 
   function openEditModal(category: Category) {
+    if (!can(user, "categories", "addEdit")) return;
     setEditingCategory(category);
     setForm({
       name: category.name,
@@ -96,6 +106,7 @@ export function CategoryManagementContainer() {
   }
 
   async function handleSubmit() {
+    if (!can(user, "categories", "addEdit")) return;
     const nextErrors = validateCategory(form);
 
     if (Object.keys(nextErrors).length > 0) {
@@ -127,6 +138,7 @@ export function CategoryManagementContainer() {
   }
 
   async function handleDeleteConfirm() {
+    if (!can(user, "categories", "delete")) return;
     if (!deleteTarget) {
       return;
     }
@@ -146,6 +158,7 @@ export function CategoryManagementContainer() {
   }
 
   async function handleToggleStatus(category: Category) {
+    if (!can(user, "categories", "addEdit")) return;
     try {
       const nextStatus = category.status === "active" ? "inactive" : "active";
       await updateCategory(category.id, {
@@ -173,14 +186,14 @@ export function CategoryManagementContainer() {
             Manage category records from the API and control whether they are active.
           </Text>
         </div>
-        <Button onClick={openCreateModal}>Add category</Button>
+        <Permission menu="categories" action="addEdit"><Button onClick={openCreateModal}>Add category</Button></Permission>
       </div>
 
       {!isLoading && categories.length === 0 ? (
         <EmptyState
           title="No categories yet"
           description="Create your first category using the backend API."
-          action={<Button onClick={openCreateModal}>Create first category</Button>}
+          action={<Permission menu="categories" action="addEdit"><Button onClick={openCreateModal}>Create first category</Button></Permission>}
         />
       ) : (
         <>
@@ -229,18 +242,18 @@ export function CategoryManagementContainer() {
                       >
                         View
                       </Link>
-                      <ActionMenuItem onSelect={() => openEditModal(category)}>
+                      <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => openEditModal(category)}>
                         Edit
-                      </ActionMenuItem>
-                      <ActionMenuItem onSelect={() => handleToggleStatus(category)}>
+                      </ActionMenuItem></Permission>
+                      <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(category)}>
                         {category.status === "active" ? "Deactivate" : "Activate"}
-                      </ActionMenuItem>
-                      <ActionMenuItem
+                      </ActionMenuItem></Permission>
+                      <Permission menu="categories" action="delete"><ActionMenuItem
                         tone="danger"
                         onSelect={() => setDeleteTarget(category)}
                       >
                         Delete
-                      </ActionMenuItem>
+                      </ActionMenuItem></Permission>
                     </ActionMenu>
                   </div>
 
@@ -352,18 +365,18 @@ export function CategoryManagementContainer() {
                         >
                           View
                         </Link>
-                        <ActionMenuItem onSelect={() => openEditModal(category)}>
+                        <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => openEditModal(category)}>
                           Edit
-                        </ActionMenuItem>
-                        <ActionMenuItem onSelect={() => handleToggleStatus(category)}>
+                        </ActionMenuItem></Permission>
+                        <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(category)}>
                           {category.status === "active" ? "Deactivate" : "Activate"}
-                        </ActionMenuItem>
-                        <ActionMenuItem
+                        </ActionMenuItem></Permission>
+                        <Permission menu="categories" action="delete"><ActionMenuItem
                           tone="danger"
                           onSelect={() => setDeleteTarget(category)}
                         >
                           Delete
-                        </ActionMenuItem>
+                        </ActionMenuItem></Permission>
                       </ActionMenu>
                     </td>
                   </tr>
@@ -375,7 +388,7 @@ export function CategoryManagementContainer() {
         </>
       )}
 
-      <Modal
+      <Permission menu="categories" action="addEdit"><Modal
         open={isModalOpen}
         onClose={closeModal}
         title={editingCategory ? "Edit category" : "Create category"}
@@ -450,9 +463,9 @@ export function CategoryManagementContainer() {
             </Button>
           </div>
         </div>
-      </Modal>
+      </Modal></Permission>
 
-      <ConfirmDialog
+      <Permission menu="categories" action="delete"><ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete category"
         message={
@@ -465,7 +478,7 @@ export function CategoryManagementContainer() {
           setDeleteError("");
         }}
         onConfirm={handleDeleteConfirm}
-      />
+      /></Permission>
     </section>
   );
 }

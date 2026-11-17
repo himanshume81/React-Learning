@@ -1,5 +1,8 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { can } from "@/lib/rbac/permissions";
+import { Permission } from "@/components/templates/Permission";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
@@ -101,6 +104,8 @@ function validateProduct(input: ProductInput): FormErrors {
 }
 
 export function ProductListContainer() {
+  const { user } = useAuth();
+  const canEditProducts = can(user, "products", "addEdit");
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -153,6 +158,7 @@ export function ProductListContainer() {
   }
 
   async function refreshCategories() {
+    if (!can(user, "products", "addEdit")) return;
     setCategories(await fetchCategories());
   }
 
@@ -264,13 +270,14 @@ export function ProductListContainer() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!canEditProducts) return;
     void fetchCategories().then((results) => {
       if (!cancelled) setCategories(results);
     }).catch(() => {
       if (!cancelled) setLoadError("Could not load categories. Please try again.");
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [canEditProducts]);
 
   useEffect(() => {
     // Synchronize the server results and loading state with submitted search filters.
@@ -280,6 +287,7 @@ export function ProductListContainer() {
   }, [refreshProducts]);
 
   function openCreateModal() {
+    if (!can(user, "products", "addEdit")) return;
     setEditingProduct(null);
     setErrors({});
     setPendingImages([]);
@@ -291,6 +299,7 @@ export function ProductListContainer() {
   }
 
   async function openEditModal(product: Product) {
+    if (!can(user, "products", "addEdit")) return;
     setIsEditLoading(true);
     setErrors({});
 
@@ -384,6 +393,7 @@ export function ProductListContainer() {
   }
 
   async function handleSubmit() {
+    if (!can(user, "products", "addEdit")) return;
     const nextErrors = validateProduct(form);
 
     if (Object.keys(nextErrors).length > 0) {
@@ -438,6 +448,7 @@ export function ProductListContainer() {
   }
 
   async function handleDeleteConfirm() {
+    if (!can(user, "products", "delete")) return;
     if (!deleteTarget) {
       return;
     }
@@ -460,6 +471,7 @@ export function ProductListContainer() {
   }
 
   async function handleToggleStatus(product: Product) {
+    if (!can(user, "products", "addEdit")) return;
     try {
       const nextStatus = product.status === "active" ? "inactive" : "active";
       await updateProduct(product.id, {
@@ -502,6 +514,7 @@ export function ProductListContainer() {
   }
 
   async function handleBulkDeleteConfirm() {
+    if (!can(user, "products", "delete")) return;
     if (selectedProductIds.size === 0 || isBulkDeleting) return;
 
     setIsBulkDeleting(true);
@@ -546,14 +559,14 @@ export function ProductListContainer() {
 
         <div className="flex flex-wrap gap-3">
           {selectedProductIds.size > 0 ? (
-            <Button variant="danger" onClick={() => setIsBulkDeleteOpen(true)}>
+            <Permission menu="products" action="delete"><Button variant="danger" onClick={() => setIsBulkDeleteOpen(true)}>
               Delete selected ({selectedProductIds.size})
-            </Button>
+            </Button></Permission>
           ) : null}
           <ProductBulkUpload onUploaded={refreshProducts} />
-          <Button onClick={openCreateModal} disabled={categories.length === 0}>
+          <Permission menu="products" action="addEdit"><Button onClick={openCreateModal} disabled={categories.length === 0}>
             Add product
-          </Button>
+          </Button></Permission>
         </div>
       </div>
 
@@ -575,7 +588,7 @@ export function ProductListContainer() {
           <Text className="text-sm text-red-600 dark:text-red-400">{loadError}</Text>
           <Button variant="secondary" onClick={() => void refreshProducts()}>Retry</Button>
         </div>
-      ) : categories.length === 0 && !isLoading && !activeSearch ? (
+      ) : can(user, "products", "addEdit") && categories.length === 0 && products.length === 0 && !isLoading && !activeSearch ? (
         <EmptyState
           title="Create a category first"
           description="Products need a category before they can be added."
@@ -590,7 +603,7 @@ export function ProductListContainer() {
           }
           action={
             categories.length > 0 ? (
-              <Button onClick={openCreateModal}>Create product</Button>
+              <Permission menu="products" action="addEdit"><Button onClick={openCreateModal}>Create product</Button></Permission>
             ) : undefined
           }
         />
@@ -638,13 +651,13 @@ export function ProductListContainer() {
                       </Text>
                     </div>
                     <div className="flex items-center gap-2">
-                    <input
+                    <Permission menu="products" action="delete"><input
                       type="checkbox"
                       checked={selectedProductIds.has(product.id)}
                       onChange={() => toggleProductSelection(product.id)}
                       aria-label={`Select ${product.name}`}
                       className="h-4 w-4 rounded border-zinc-300 accent-red-600"
-                    />
+                    /></Permission>
                     <ActionMenu label={`Actions for ${product.name}`}>
                       <Link
                         href={`/products/${product.id}`}
@@ -653,18 +666,18 @@ export function ProductListContainer() {
                       >
                         View
                       </Link>
-                      <ActionMenuItem onSelect={() => void openEditModal(product)}>
+                      <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => void openEditModal(product)}>
                         Edit
-                      </ActionMenuItem>
-                      <ActionMenuItem onSelect={() => handleToggleStatus(product)}>
+                      </ActionMenuItem></Permission>
+                      <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(product)}>
                         {product.status === "active" ? "Deactivate" : "Activate"}
-                      </ActionMenuItem>
-                      <ActionMenuItem
+                      </ActionMenuItem></Permission>
+                      <Permission menu="products" action="delete"><ActionMenuItem
                         tone="danger"
                         onSelect={() => setDeleteTarget(product)}
                       >
                         Delete
-                      </ActionMenuItem>
+                      </ActionMenuItem></Permission>
                     </ActionMenu>
                     </div>
                   </div>
@@ -719,14 +732,14 @@ export function ProductListContainer() {
             <thead>
               <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
                 <th className="w-12 px-4 py-3 font-semibold">
-                  <input
+                  <Permission menu="products" action="delete"><input
                     type="checkbox"
                     checked={currentPageIsSelected}
                     onChange={toggleCurrentPageSelection}
                     disabled={products.length === 0 || isLoading}
                     aria-label="Select all products on this page"
                     className="h-4 w-4 rounded border-zinc-300 accent-red-600"
-                  />
+                  /></Permission>
                 </th>
                 <th className="px-4 py-3 font-semibold">ID</th>
                 <th className="px-4 py-3 font-semibold">Product</th>
@@ -782,13 +795,13 @@ export function ProductListContainer() {
                     className={`border-b border-zinc-200 last:border-0 dark:border-zinc-800 ${selectedProductIds.has(product.id) ? "bg-red-50/60 dark:bg-red-950/20" : ""}`}
                   >
                     <td className="px-4 py-3">
-                      <input
+                      <Permission menu="products" action="delete"><input
                         type="checkbox"
                         checked={selectedProductIds.has(product.id)}
                         onChange={() => toggleProductSelection(product.id)}
                         aria-label={`Select ${product.name}`}
                         className="h-4 w-4 rounded border-zinc-300 accent-red-600"
-                      />
+                      /></Permission>
                     </td>
                     <td className="px-4 py-3">
                       <Link
@@ -852,18 +865,18 @@ export function ProductListContainer() {
                         >
                           View
                         </Link>
-                        <ActionMenuItem onSelect={() => void openEditModal(product)}>
+                        <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => void openEditModal(product)}>
                           Edit
-                        </ActionMenuItem>
-                        <ActionMenuItem onSelect={() => handleToggleStatus(product)}>
+                        </ActionMenuItem></Permission>
+                        <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(product)}>
                           {product.status === "active" ? "Deactivate" : "Activate"}
-                        </ActionMenuItem>
-                        <ActionMenuItem
+                        </ActionMenuItem></Permission>
+                        <Permission menu="products" action="delete"><ActionMenuItem
                           tone="danger"
                           onSelect={() => setDeleteTarget(product)}
                         >
                           Delete
-                        </ActionMenuItem>
+                        </ActionMenuItem></Permission>
                       </ActionMenu>
                     </td>
                   </tr>
@@ -904,7 +917,7 @@ export function ProductListContainer() {
       ) : null}
       </div>
 
-      <Modal
+      <Permission menu="products" action="addEdit"><Modal
         open={isModalOpen}
         onClose={closeModal}
         title={editingProduct ? "Edit product" : "Create product"}
@@ -1179,18 +1192,18 @@ export function ProductListContainer() {
           </>
           ) : null}
         </div>
-      </Modal>
+      </Modal></Permission>
 
-      <ConfirmDialog
+      <Permission menu="products" action="delete"><ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete product"
         message={`Delete "${deleteTarget?.name}"? This action cannot be undone.`}
         confirmLabel="Delete product"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
-      />
+      /></Permission>
 
-      <ConfirmDialog
+      <Permission menu="products" action="delete"><ConfirmDialog
         open={isBulkDeleteOpen}
         title="Delete selected products"
         message={`Delete ${selectedProductIds.size} selected product${selectedProductIds.size === 1 ? "" : "s"}? This action cannot be undone.`}
@@ -1201,7 +1214,7 @@ export function ProductListContainer() {
           if (!isBulkDeleting) setIsBulkDeleteOpen(false);
         }}
         onConfirm={handleBulkDeleteConfirm}
-      />
+      /></Permission>
     </section>
   );
 }

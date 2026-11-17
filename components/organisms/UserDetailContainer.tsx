@@ -1,5 +1,6 @@
 "use client";
 
+import { Permission } from "@/components/templates/Permission";
 import { Avatar } from "@/components/atoms/Avatar";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
@@ -30,6 +31,7 @@ function formatDate(iso: string) {
 export function UserDetailContainer({ userId }: { userId: string }) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -41,6 +43,10 @@ export function UserDetailContainer({ userId }: { userId: string }) {
       if (ignore) return;
       setUser(result);
       setIsLoading(false);
+    }).catch((error: unknown) => {
+      if (ignore) return;
+      setRequestError(error instanceof Error ? error.message : "Could not load users.");
+      setIsLoading(false);
     });
 
     return () => {
@@ -50,10 +56,14 @@ export function UserDetailContainer({ userId }: { userId: string }) {
 
   const handleDelete = async () => {
     setIsDeleting(true);
-    await deleteUser(userId);
-    setIsDeleting(false);
-    setConfirmingDelete(false);
-    router.push("/users");
+    try {
+      await deleteUser(userId);
+      setConfirmingDelete(false);
+      router.push("/users");
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "Could not delete user.");
+      setConfirmingDelete(false);
+    } finally { setIsDeleting(false); }
   };
 
   if (isLoading) {
@@ -65,6 +75,8 @@ export function UserDetailContainer({ userId }: { userId: string }) {
       </div>
     );
   }
+
+  if (requestError && !user) return <p role="alert" className="text-red-600">{requestError}</p>;
 
   if (!user) {
     return (
@@ -82,6 +94,7 @@ export function UserDetailContainer({ userId }: { userId: string }) {
 
   return (
     <section className="max-w-lg space-y-6">
+      {requestError && <p role="alert" className="text-sm text-red-600">{requestError}</p>}
       <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center gap-4">
           <Avatar name={user.name} />
@@ -94,7 +107,7 @@ export function UserDetailContainer({ userId }: { userId: string }) {
         </div>
 
         <div className="mt-6 flex gap-2">
-          <Badge tone="info">{user.role}</Badge>
+          <Badge tone="info">{user.roleName ?? "Unassigned"}</Badge>
           <Badge tone={user.status === "active" ? "success" : "neutral"}>
             {user.status}
           </Badge>
@@ -106,19 +119,19 @@ export function UserDetailContainer({ userId }: { userId: string }) {
       </div>
 
       <div className="flex gap-3">
-        <Link href={`/users/${user.id}/edit`}>
+        <Permission menu="users" action="addEdit"><Link href={`/users/${user.id}/edit`}>
           <Button variant="secondary">Edit</Button>
-        </Link>
-        <Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
+        </Link></Permission>
+        <Permission menu="users" action="delete"><Button variant="ghost" onClick={() => setConfirmingDelete(true)}>
           Delete
-        </Button>
+        </Button></Permission>
         <Link href="/users">
           <Button variant="ghost">Back to users</Button>
         </Link>
       </div>
 
       {confirmingDelete && (
-        <ConfirmDialog
+        <Permission menu="users" action="delete"><ConfirmDialog
           open
           title="Delete user"
           message={`Are you sure you want to delete ${user.name}? This can't be undone.`}
@@ -126,7 +139,7 @@ export function UserDetailContainer({ userId }: { userId: string }) {
           isPending={isDeleting}
           onConfirm={handleDelete}
           onCancel={() => setConfirmingDelete(false)}
-        />
+        /></Permission>
       )}
     </section>
   );

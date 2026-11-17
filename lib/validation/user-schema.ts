@@ -11,9 +11,7 @@ export const userSchema = z.object({
     .email("Enter a valid email address"),
   phoneNumber: z.string().optional().or(z.literal("")),
   password: z.string().optional(),
-  role: z.enum(["admin", "user"], {
-    errorMap: () => ({ message: "Select a role" }),
-  }),
+  roleId: z.string().min(1, "Select a role"),
   status: z.enum(["active", "inactive"], {
     errorMap: () => ({ message: "Select a status" }),
   }),

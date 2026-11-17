@@ -64,7 +64,12 @@ async function rawRequest<T>(path: string, { body, auth, headers, ...init }: Api
   }
 
   if (!response.ok) {
-    throw new ApiError(extractMessage(data, "Something went wrong. Please try again."), response.status);
+    const fallback = response.status === 403 ? "You do not have permission to perform this action." : "Something went wrong. Please try again.";
+    const message = extractMessage(data, fallback);
+    if (response.status === 403 && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("api:forbidden", { detail: message }));
+    }
+    throw new ApiError(message, response.status);
   }
 
   return data as T;

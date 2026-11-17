@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 export function EditUserContainer({ userId }: { userId: string }) {
   const router = useRouter();
   const [defaultValues, setDefaultValues] = useState<UserFormValues | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -27,10 +28,14 @@ export function EditUserContainer({ userId }: { userId: string }) {
           name: user.name,
           email: user.email,
           phoneNumber: user.phoneNumber ?? "",
-          role: "admin",
+          roleId: user.roleId ?? "",
           status: user.status,
         });
       }
+      setIsLoading(false);
+    }).catch((error: unknown) => {
+      if (ignore) return;
+      setRequestError(error instanceof Error ? error.message : "Could not load users.");
       setIsLoading(false);
     });
 
@@ -42,10 +47,11 @@ export function EditUserContainer({ userId }: { userId: string }) {
   const handleSubmit = async (values: UserFormValues) => {
     await updateUser(userId, {
       ...values,
-      role: "admin",
     });
     router.push(`/users/${userId}`);
   };
+
+  if (requestError) return <p role="alert" className="text-red-600">{requestError}</p>;
 
   if (notFound) {
     return (
@@ -58,12 +64,13 @@ export function EditUserContainer({ userId }: { userId: string }) {
 
   return (
     <section className="space-y-6">
+      {requestError && <p role="alert" className="text-sm text-red-600">{requestError}</p>}
       <div>
         <Text as="h1" className="text-2xl font-semibold">
           Edit user
         </Text>
         <Text className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Update this user's details.
+          Update this user&apos;s details.
         </Text>
       </div>
 

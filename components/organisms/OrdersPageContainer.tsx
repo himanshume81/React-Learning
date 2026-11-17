@@ -1,5 +1,8 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { can } from "@/lib/rbac/permissions";
+import { Permission } from "@/components/templates/Permission";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { Select } from "@/components/atoms/Select";
@@ -65,6 +68,7 @@ function formatMoney(amount: number) {
 }
 
 export function OrdersPageContainer() {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
@@ -152,11 +156,15 @@ export function OrdersPageContainer() {
   const debouncedSearch = useDebounce(searchInput, 300);
 
   useEffect(() => {
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [status, pageSize]);
 
   useEffect(() => {
     let ignore = false;
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
 
     fetchOrders({
@@ -192,6 +200,7 @@ export function OrdersPageContainer() {
   }, [page, pageSize, status, ordersVersion, showToast]);
 
   async function handleStatusChange(order: Order, nextStatus: OrderStatus) {
+    if (!can(user, "orders", "addEdit")) return;
     setUpdatingOrderId(order.id);
 
     try {
@@ -210,6 +219,7 @@ export function OrdersPageContainer() {
   }
 
   async function openCreateOrderModal() {
+    if (!can(user, "orders", "addEdit")) return;
     setIsCreateModalOpen(true);
     setIsLoadingProducts(true);
     setOrderProducts([]);
@@ -276,6 +286,7 @@ export function OrdersPageContainer() {
   }
 
   async function handleCreateOrder() {
+    if (!can(user, "orders", "addEdit")) return;
     const userId = Number(selectedUserId);
 
     if (!Number.isInteger(userId) || userId <= 0) {
@@ -360,7 +371,7 @@ export function OrdersPageContainer() {
             Review orders and filter the list by any available order status.
           </Text>
         </div>
-        <Button onClick={() => void openCreateOrderModal()}>Create order</Button>
+        <Permission menu="orders" action="addEdit"><Button onClick={() => void openCreateOrderModal()}>Create order</Button></Permission>
       </div>
 
       <div
@@ -575,7 +586,7 @@ export function OrdersPageContainer() {
         </>
       )}
 
-      <Modal
+      <Permission menu="orders" action="addEdit"><Modal
         open={isCreateModalOpen}
         onClose={closeCreateOrderModal}
         title="Create order"
@@ -719,7 +730,7 @@ export function OrdersPageContainer() {
             </div>
           </div>
         )}
-      </Modal>
+      </Modal></Permission>
 
       <Pagination
         page={page}

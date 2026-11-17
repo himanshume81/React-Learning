@@ -1,3 +1,6 @@
+"use client";
+
+import { Permission } from "@/components/templates/Permission";
 import { Avatar } from "@/components/atoms/Avatar";
 import { Badge } from "@/components/atoms/Badge";
 import { Text } from "@/components/atoms/Text";
@@ -31,7 +34,7 @@ export function UserRow({ user, onDelete }: UserRowProps) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <Badge tone="info">{user.role}</Badge>
+        <Badge tone="info">{user.roleName ?? "Unassigned"}</Badge>
       </td>
       <td className="px-4 py-3">
         <Badge tone={user.status === "active" ? "success" : "neutral"}>
@@ -51,16 +54,16 @@ export function UserRow({ user, onDelete }: UserRowProps) {
             >
               View
             </Link>
-            <Link
+            <Permission menu="users" action="addEdit"><Link
               href={`/users/${user.id}/edit`}
               role="menuitem"
               className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
             >
               Edit
-            </Link>
-            <ActionMenuItem tone="danger" onSelect={() => onDelete(user)}>
+            </Link></Permission>
+            <Permission menu="users" action="delete"><ActionMenuItem tone="danger" onSelect={() => onDelete(user)}>
               Delete
-            </ActionMenuItem>
+            </ActionMenuItem></Permission>
           </ActionMenu>
         </div>
       </td>

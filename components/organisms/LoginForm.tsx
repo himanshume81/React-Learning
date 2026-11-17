@@ -53,8 +53,8 @@ export function LoginForm() {
     }
 
     try {
-      await login(result.data.email, result.data.password, result.data.userType);
-      router.replace("/dashboard");
+      const destination = await login(result.data.email, result.data.password, result.data.userType);
+      router.replace(destination);
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         setFormError("Incorrect email or password.");
@@ -103,7 +103,7 @@ export function LoginForm() {
           {...register("email")}
         />
 
-        <input type="hidden" value={USER_ROLES.ADMIN} {...register("userType")} />
+        <input type="hidden" value={USER_ROLES.USER} {...register("userType")} />
 
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
