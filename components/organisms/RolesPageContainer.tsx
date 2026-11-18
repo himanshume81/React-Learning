@@ -5,6 +5,7 @@ import { PermissionMatrix } from "@/components/molecules/PermissionMatrix";
 import { Button } from "@/components/atoms/Button";
 import { FormField } from "@/components/molecules/FormField";
 import { Modal } from "@/components/molecules/Modal";
+import { AccessDenied } from "@/components/templates/AccessDenied";
 import { Spinner } from "@/components/atoms/Spinner";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -23,6 +24,7 @@ export function RolesPageContainer() {
   const { user, refreshProfile } = useAuth();
   const { showToast } = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
+  const [viewDenied, setViewDenied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -39,8 +41,16 @@ export function RolesPageContainer() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
-    fetchRoles().then((data) => { if (!ignore) setRoles(data); })
-      .catch((err: unknown) => { if (!ignore) setError(message(err)); })
+    fetchRoles(false).then((data) => { if (!ignore) setRoles(data); })
+      .catch((err: unknown) => {
+        if (ignore) return;
+        if (err instanceof ApiError && err.status === 403) {
+          setRoles([]);
+          setViewDenied(true);
+          return;
+        }
+        setError(message(err));
+      })
       .finally(() => { if (!ignore) setLoading(false); });
     return () => { ignore = true; };
   }, [retry]);
@@ -73,6 +83,9 @@ export function RolesPageContainer() {
   }
 
 
+  if (viewDenied) return <AccessDenied />;
+  if (loading) return <div className="flex justify-center py-24"><Spinner /></div>;
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -80,9 +93,9 @@ export function RolesPageContainer() {
         <Button disabled={pending} onClick={() => { setForm({ name: "", permissions: emptyPermissions(), status: "active" }); setFormError(null); setNameError(undefined); setEditorOpen(true); }}>Add role</Button>
       </div>
       {error && <div role="alert" className="space-y-2 text-red-600"><p>{error}</p><Button variant="secondary" onClick={() => setRetry((value) => value + 1)}>Retry</Button></div>}
-      {loading ? <Spinner /> : !error && roles.length === 0 ? <p>No roles found. Create a role to get started.</p> : (
+      {!error && (roles.length === 0 ? <p>No roles found. Create a role to get started.</p> : (
         <RolesTable roles={roles} updatingId={updatingId} onToggleStatus={(role) => void toggleStatus(role)} />
-      )}
+      ))}
       <Modal open={editorOpen} title="Add role" onClose={() => { if (!pending) setEditorOpen(false); }}>
         <form onSubmit={submit} className="space-y-5" noValidate>
           <FormField id="role-name" label="Role name" value={form.name} error={nameError} onChange={(event) => setForm({ ...form, name: event.target.value })} disabled={pending} />

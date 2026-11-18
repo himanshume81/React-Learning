@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api-client";
+import { ApiError, apiFetch } from "@/lib/api-client";
 import type { Category, CategoryInput, CategoryStatus } from "@/types/category";
 import type { Product, ProductInput, ProductStatus } from "@/types/product";
 
@@ -191,20 +191,25 @@ function normalizeProductListResponse(payload: ProductListResponse): RawProduct[
   return [];
 }
 
-export async function fetchCategories(): Promise<Category[]> {
-  const rawCategories = await apiFetch<RawCategory[]>("/categories", { auth: true });
+export async function fetchCategories(notifyForbidden = true): Promise<Category[]> {
+  const rawCategories = await apiFetch<RawCategory[]>("/categories", { auth: true, notifyForbidden });
   return rawCategories.map((category) => toCategory(category));
 }
 
-export async function fetchCategoriesWithCounts(): Promise<Category[]> {
+async function fetchProductsForCategoryCounts(includeProductCounts: boolean) {
+  if (!includeProductCounts) return undefined;
+  return apiFetch<ProductListResponse>("/products", { auth: true, notifyForbidden: false })
+    .then(normalizeProductListResponse)
+    .catch(() => undefined);
+}
+
+export async function fetchCategoriesWithCounts(includeProductCounts: boolean): Promise<Category[]> {
   const [rawCategories, rawProducts] = await Promise.all([
-    apiFetch<RawCategory[]>("/categories", { auth: true }),
-    apiFetch<ProductListResponse>("/products", { auth: true })
-      .then(normalizeProductListResponse)
-      .catch(() => []),
+    apiFetch<RawCategory[]>("/categories", { auth: true, notifyForbidden: false }),
+    fetchProductsForCategoryCounts(includeProductCounts),
   ]);
 
-  const countByCategoryId = rawProducts.reduce<Record<string, number>>(
+  const countByCategoryId = rawProducts?.reduce<Record<string, number>>(
     (accumulator, product) => {
       const categoryId = String(product.categoryId);
       accumulator[categoryId] = (accumulator[categoryId] ?? 0) + 1;
@@ -214,25 +219,24 @@ export async function fetchCategoriesWithCounts(): Promise<Category[]> {
   );
 
   return rawCategories.map((category) =>
-    toCategory(category, countByCategoryId[String(category.id)] ?? 0)
+    toCategory(category, countByCategoryId && (countByCategoryId[String(category.id)] ?? 0))
   );
 }
 
-export async function fetchCategoryById(id: string): Promise<Category | null> {
+export async function fetchCategoryById(id: string, includeProductCounts: boolean): Promise<Category | null> {
   try {
     const [rawCategory, rawProducts] = await Promise.all([
-      apiFetch<RawCategory>(`/categories/${id}`, { auth: true }),
-      apiFetch<ProductListResponse>("/products", { auth: true })
-        .then(normalizeProductListResponse)
-        .catch(() => []),
+      apiFetch<RawCategory>(`/categories/${id}`, { auth: true, notifyForbidden: false }),
+      fetchProductsForCategoryCounts(includeProductCounts),
     ]);
 
-    const productCount = rawProducts.filter(
-      (product) => String(product.categoryId) === String(id)
+    const productCount = rawProducts?.filter(
+      (product) => String(product.categoryId) === id
     ).length;
 
     return toCategory(rawCategory, productCount);
-  } catch {
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) throw error;
     return null;
   }
 }
@@ -305,7 +309,7 @@ export async function fetchProductsPage(query: {
   page: number;
   limit: number | "all";
 }) {
-  const categories = await fetchCategories();
+  const categories = await fetchCategories(false).catch(() => []);
 
   async function fetchPage(page: number) {
     const params = new URLSearchParams({
@@ -314,6 +318,7 @@ export async function fetchProductsPage(query: {
     });
     const payload = await apiFetch<ProductListResponse>(`/products?${params}`, {
       auth: true,
+      notifyForbidden: false,
     });
     const items = normalizeProductListResponse(payload);
     const pagination = Array.isArray(payload) ? undefined : payload.pagination;
@@ -364,7 +369,7 @@ export async function searchProducts(params: ProductSearchParams): Promise<{
       method: "GET",
       auth: true,
     }),
-    fetchCategories(),
+    fetchCategories(false).catch(() => []),
   ]);
   const reply = payload.reply ?? payload.answer ?? payload.message;
   return {

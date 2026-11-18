@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/atoms/Skeleton";
 
-export function UserRowSkeleton() {
+export function UserRowSkeleton({ showActions }: { showActions: boolean }) {
   return (
     <tr className="border-b border-zinc-200 last:border-0 dark:border-zinc-800">
       <td className="px-4 py-3">
@@ -21,9 +21,7 @@ export function UserRowSkeleton() {
       <td className="px-4 py-3">
         <Skeleton className="h-4 w-20" />
       </td>
-      <td className="px-4 py-3">
-        <Skeleton className="h-4 w-32" />
-      </td>
+      {showActions && <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>}
     </tr>
   );
 }

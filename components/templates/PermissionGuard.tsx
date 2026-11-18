@@ -4,9 +4,9 @@ import { useAuth } from "@/context/AuthContext";
 import { AuthGuard } from "@/components/templates/AuthGuard";
 import { Spinner } from "@/components/atoms/Spinner";
 import { Button } from "@/components/atoms/Button";
-import { firstPermittedPage, routeAllowed } from "@/lib/rbac/permissions";
+import { routeAllowed } from "@/lib/rbac/permissions";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
+import { AccessDenied } from "@/components/templates/AccessDenied";
 import type { ReactNode } from "react";
 
 export function PermissionGuard({ children }: { children: ReactNode }) {
@@ -19,13 +19,7 @@ export function PermissionGuard({ children }: { children: ReactNode }) {
           <p>{permissionError}</p>
           <Button onClick={() => void refreshProfile()}>Retry access check</Button>
         </div>
-      ) : routeAllowed(user, pathname) ? children : (
-        <div role="alert" className="space-y-3 py-8">
-          <h1 className="text-xl font-semibold">Access denied</h1>
-          <p>You do not have permission to view this page.</p>
-          <Link className="text-green-700 underline" href={firstPermittedPage(user)}>Open an available page</Link>
-        </div>
-      )}
+      ) : routeAllowed(user, pathname) ? children : <AccessDenied />}
     </AuthGuard>
   );
 }

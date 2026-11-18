@@ -3,6 +3,8 @@ import { UserCard } from "@/components/molecules/UserCard";
 import { UserCardSkeleton } from "@/components/molecules/UserCardSkeleton";
 import { UserRow } from "@/components/molecules/UserRow";
 import { UserRowSkeleton } from "@/components/molecules/UserRowSkeleton";
+import { useAuth } from "@/context/AuthContext";
+import { can } from "@/lib/rbac/permissions";
 import type { User } from "@/types/user";
 import { memo, type ReactNode } from "react";
 
@@ -24,6 +26,9 @@ export const UserTable = memo(function UserTable({
   onDelete,
   emptyAction,
 }: UserTableProps) {
+  const { user } = useAuth();
+  const showActions = can(user, "users", "addEdit") || can(user, "users", "delete");
+
   if (!isLoading && users.length === 0) {
     return (
       <EmptyState
@@ -56,16 +61,16 @@ export const UserTable = memo(function UserTable({
               <th className="px-4 py-3 font-semibold">Role</th>
               <th className="px-4 py-3 font-semibold">Status</th>
               <th className="px-4 py-3 font-semibold">Joined</th>
-              <th className="px-4 py-3 font-semibold">Actions</th>
+              {showActions && <th className="px-4 py-3 font-semibold">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {isLoading
               ? Array.from({ length: SKELETON_COUNT }, (_, index) => (
-                  <UserRowSkeleton key={index} />
+                  <UserRowSkeleton key={index} showActions={showActions} />
                 ))
               : users.map((user) => (
-                  <UserRow key={user.id} user={user} onDelete={onDelete} />
+                  <UserRow key={user.id} user={user} onDelete={onDelete} showActions={showActions} />
                 ))}
           </tbody>
         </table>

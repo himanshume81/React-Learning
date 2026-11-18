@@ -1,3 +1,7 @@
+"use client";
+
+import { useAuth } from "@/context/AuthContext";
+import { can, isAdmin } from "@/lib/rbac/permissions";
 import { adminTableDefinitions, type AdminDataCell, type AdminTableKey } from "@/assets/data/admin-views";
 import { AdminTable } from "@/components/organisms/AdminTable";
 import type { ReactNode } from "react";
@@ -8,18 +12,25 @@ function renderCell(cell: AdminDataCell): ReactNode {
 }
 
 function StaticAdminTable({ view }: { view: AdminTableKey }) {
+  const { user } = useAuth();
   const definition = adminTableDefinitions[view];
-  const rows = definition.rows.map((row) => [
-    ...row.map(renderCell),
-    <button key="actions" type="button" aria-label={`More actions for ${String(row[0])}`} className="zopping-actions cursor-pointer">⋮</button>,
-  ]);
+  const isOrderView = view === "orders" || view === "abandonedCarts" || view === "orderReturns";
+  const canEdit = isOrderView ? can(user, "orders", "addEdit") : isAdmin(user);
+  const showActions = canEdit || (isOrderView && can(user, "orders", "delete"));
+  const rows = definition.rows.map((row) => {
+    const cells = row.map(renderCell);
+    if (showActions) {
+      cells.push(<button key="actions" type="button" aria-label={`More actions for ${String(row[0])}`} className="zopping-actions cursor-pointer">⋮</button>);
+    }
+    return cells;
+  });
 
   return (
     <AdminTable
       title={definition.title}
-      columns={[...definition.columns, "Actions"]}
+      columns={showActions ? [...definition.columns, "Actions"] : [...definition.columns]}
       rows={rows}
-      actionLabel={"actionLabel" in definition ? definition.actionLabel : undefined}
+      actionLabel={canEdit && "actionLabel" in definition ? definition.actionLabel : undefined}
       tabs={"tabs" in definition ? definition.tabs : undefined}
     />
   );

@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { can } from "@/lib/rbac/permissions";
+import { AccessDenied } from "@/components/templates/AccessDenied";
 import { Permission } from "@/components/templates/Permission";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
@@ -49,8 +50,11 @@ function validateCategory(input: CategoryInput): FormErrors {
 
 export function CategoryManagementContainer() {
   const { user } = useAuth();
+  const canViewProducts = can(user, "products");
+  const showActions = can(user, "categories", "addEdit") || can(user, "categories", "delete");
   const { showToast } = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [viewDenied, setViewDenied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,13 +68,19 @@ export function CategoryManagementContainer() {
     setIsLoading(true);
 
     try {
-      setCategories(await fetchCategoriesWithCounts());
+      setCategories(await fetchCategoriesWithCounts(canViewProducts));
+      setViewDenied(false);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 403) {
+        setCategories([]);
+        setViewDenied(true);
+        return;
+      }
       showToast(error instanceof Error ? error.message : "Could not load categories.", "error");
     } finally {
       setIsLoading(false);
     }
-  }, [showToast]);
+  }, [canViewProducts, showToast]);
 
   useEffect(() => {
     // Reset loading/pagination for this external data request.
@@ -175,6 +185,8 @@ export function CategoryManagementContainer() {
     }
   }
 
+  if (viewDenied) return <AccessDenied />;
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -234,27 +246,29 @@ export function CategoryManagementContainer() {
                         {category.slug}
                       </Text>
                     </div>
-                    <ActionMenu label={`Actions for ${category.name}`}>
-                      <Link
-                        href={`/categories/${category.id}`}
-                        role="menuitem"
-                        className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
-                      >
-                        View
-                      </Link>
-                      <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => openEditModal(category)}>
-                        Edit
-                      </ActionMenuItem></Permission>
-                      <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(category)}>
-                        {category.status === "active" ? "Deactivate" : "Activate"}
-                      </ActionMenuItem></Permission>
-                      <Permission menu="categories" action="delete"><ActionMenuItem
-                        tone="danger"
-                        onSelect={() => setDeleteTarget(category)}
-                      >
-                        Delete
-                      </ActionMenuItem></Permission>
-                    </ActionMenu>
+                    {showActions && (
+                      <ActionMenu label={`Actions for ${category.name}`}>
+                        <Link
+                          href={`/categories/${category.id}`}
+                          role="menuitem"
+                          className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                        >
+                          View
+                        </Link>
+                        <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => openEditModal(category)}>
+                          Edit
+                        </ActionMenuItem></Permission>
+                        <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(category)}>
+                          {category.status === "active" ? "Deactivate" : "Activate"}
+                        </ActionMenuItem></Permission>
+                        <Permission menu="categories" action="delete"><ActionMenuItem
+                          tone="danger"
+                          onSelect={() => setDeleteTarget(category)}
+                        >
+                          Delete
+                        </ActionMenuItem></Permission>
+                      </ActionMenu>
+                    )}
                   </div>
 
                   {category.description ? (
@@ -270,8 +284,9 @@ export function CategoryManagementContainer() {
                       {category.status}
                     </Badge>
                     <Badge tone="info">
-                      {category.productCount ?? 0} product
-                      {(category.productCount ?? 0) === 1 ? "" : "s"}
+                      {canViewProducts && category.productCount !== undefined
+                        ? `${category.productCount} product${category.productCount === 1 ? "" : "s"}`
+                        : "Product count unavailable"}
                     </Badge>
                   </div>
                 </article>
@@ -288,7 +303,7 @@ export function CategoryManagementContainer() {
                 <th className="px-4 py-3 font-semibold">Slug</th>
                 <th className="px-4 py-3 font-semibold">Products</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
+                {showActions && <th className="px-4 py-3 font-semibold">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -314,9 +329,9 @@ export function CategoryManagementContainer() {
                     <td className="px-4 py-3">
                       <Skeleton className="h-6 w-20 rounded-full" />
                     </td>
-                    <td className="px-4 py-3">
-                      <Skeleton className="h-8 w-10 rounded-lg" />
-                    </td>
+                    {showActions && (
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-10 rounded-lg" /></td>
+                    )}
                   </tr>
                 ))
               ) : (
@@ -346,7 +361,7 @@ export function CategoryManagementContainer() {
                     </td>
                     <td className="px-4 py-3">
                       <Text className="text-sm text-zinc-500">
-                        {category.productCount ?? 0}
+                        {canViewProducts ? category.productCount ?? "—" : "—"}
                       </Text>
                     </td>
                     <td className="px-4 py-3">
@@ -356,29 +371,31 @@ export function CategoryManagementContainer() {
                         {category.status}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
-                      <ActionMenu label={`Actions for ${category.name}`}>
-                        <Link
-                          href={`/categories/${category.id}`}
-                          role="menuitem"
-                          className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
-                        >
-                          View
-                        </Link>
-                        <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => openEditModal(category)}>
-                          Edit
-                        </ActionMenuItem></Permission>
-                        <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(category)}>
-                          {category.status === "active" ? "Deactivate" : "Activate"}
-                        </ActionMenuItem></Permission>
-                        <Permission menu="categories" action="delete"><ActionMenuItem
-                          tone="danger"
-                          onSelect={() => setDeleteTarget(category)}
-                        >
-                          Delete
-                        </ActionMenuItem></Permission>
-                      </ActionMenu>
-                    </td>
+                    {showActions && (
+                      <td className="px-4 py-3">
+                        <ActionMenu label={`Actions for ${category.name}`}>
+                          <Link
+                            href={`/categories/${category.id}`}
+                            role="menuitem"
+                            className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                          >
+                            View
+                          </Link>
+                          <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => openEditModal(category)}>
+                            Edit
+                          </ActionMenuItem></Permission>
+                          <Permission menu="categories" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(category)}>
+                            {category.status === "active" ? "Deactivate" : "Activate"}
+                          </ActionMenuItem></Permission>
+                          <Permission menu="categories" action="delete"><ActionMenuItem
+                            tone="danger"
+                            onSelect={() => setDeleteTarget(category)}
+                          >
+                            Delete
+                          </ActionMenuItem></Permission>
+                        </ActionMenu>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

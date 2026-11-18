@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
+import { AccessDenied } from "@/components/templates/AccessDenied";
 import { Spinner } from "@/components/atoms/Spinner";
 import { FormField } from "@/components/molecules/FormField";
 import { Modal } from "@/components/molecules/Modal";
@@ -19,6 +20,7 @@ export function RoleDetailContainer({ roleId }: { roleId: string }) {
   const { user, refreshProfile } = useAuth();
   const { showToast } = useToast();
   const [role, setRole] = useState<Role | null>(null);
+  const [viewDenied, setViewDenied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,10 +33,15 @@ export function RoleDetailContainer({ roleId }: { roleId: string }) {
     // Reset the loading state for this API request.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    setError(null); setRole(null);
+    setError(null); setRole(null); setViewDenied(false);
     fetchRole(roleId).then((data) => { if (!ignore) setRole(data); })
       .catch((err: unknown) => {
-        if (!ignore) setError(err instanceof ApiError && err.status === 404 ? "Role not found." : err instanceof Error ? err.message : "Could not load role.");
+        if (ignore) return;
+        if (err instanceof ApiError && err.status === 403) {
+          setViewDenied(true);
+          return;
+        }
+        setError(err instanceof ApiError && err.status === 404 ? "Role not found." : err instanceof Error ? err.message : "Could not load role.");
       }).finally(() => { if (!ignore) setLoading(false); });
     return () => { ignore = true; };
   }, [roleId, retry]);
@@ -68,24 +75,23 @@ export function RoleDetailContainer({ roleId }: { roleId: string }) {
     } finally { setPending(false); }
   }
 
+  if (viewDenied) return <AccessDenied />;
+  if (loading) return <div className="flex justify-center py-24"><Spinner /></div>;
+
   return (
     <section className="max-w-3xl space-y-6">
       <Link href="/roles" className="text-sm text-green-700 hover:underline">Back to roles</Link>
-      {loading ? <Spinner /> : (
-        <>
-          {error && <div role="alert" className="space-y-2 text-red-600"><p>{error}</p>{!role && <Button variant="secondary" onClick={() => setRetry((value) => value + 1)}>Retry</Button>}</div>}
-          {role && (
-            <div className="space-y-6 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div><p className="text-sm text-zinc-500">{formatRoleId(role.id)}</p><h1 className="mt-1 text-2xl font-semibold">{role.name}</h1></div>
-                <Badge tone={role.status === "active" ? "success" : "neutral"}>{role.status ?? "Not provided"}</Badge>
-              </div>
-              <div><h2 className="mb-3 text-lg font-semibold">Menu permissions</h2><PermissionMatrix permissions={role.permissions} disabled onChange={() => {}} /></div>
-              {role.systemKey !== "admin" && <Button disabled={pending} onClick={() => { setNameError(undefined); setDraft({ name: role.name, permissions: role.permissions, status: role.status ?? undefined }); }}>Edit role</Button>}
-              {role.systemKey === "admin" ? <p className="text-sm text-zinc-500">The built-in Admin role is protected.</p> : role.status ? <Button variant="secondary" disabled={pending} onClick={() => void toggleStatus()}>{pending ? "Updating..." : role.status === "active" ? "Deactivate role" : "Activate role"}</Button> : <p className="text-sm text-zinc-500">The API did not provide a role status.</p>}
-            </div>
-          )}
-        </>
+      {error && <div role="alert" className="space-y-2 text-red-600"><p>{error}</p>{!role && <Button variant="secondary" onClick={() => setRetry((value) => value + 1)}>Retry</Button>}</div>}
+      {role && (
+        <div className="space-y-6 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div><p className="text-sm text-zinc-500">{formatRoleId(role.id)}</p><h1 className="mt-1 text-2xl font-semibold">{role.name}</h1></div>
+            <Badge tone={role.status === "active" ? "success" : "neutral"}>{role.status ?? "Not provided"}</Badge>
+          </div>
+          <div><h2 className="mb-3 text-lg font-semibold">Menu permissions</h2><PermissionMatrix permissions={role.permissions} disabled onChange={() => {}} /></div>
+          {role.systemKey !== "admin" && <Button disabled={pending} onClick={() => { setNameError(undefined); setDraft({ name: role.name, permissions: role.permissions, status: role.status ?? undefined }); }}>Edit role</Button>}
+          {role.systemKey === "admin" ? <p className="text-sm text-zinc-500">The built-in Admin role is protected.</p> : role.status ? <Button variant="secondary" disabled={pending} onClick={() => void toggleStatus()}>{pending ? "Updating..." : role.status === "active" ? "Deactivate role" : "Activate role"}</Button> : <p className="text-sm text-zinc-500">The API did not provide a role status.</p>}
+        </div>
       )}
       <Modal open={draft !== null} title="Edit role" onClose={() => { if (!pending) setDraft(null); }}>
         {draft && <form onSubmit={submitUpdate} className="space-y-5" noValidate>

@@ -2,6 +2,9 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { can } from "@/lib/rbac/permissions";
+import { AccessDenied } from "@/components/templates/AccessDenied";
+import { Spinner } from "@/components/atoms/Spinner";
+import { ApiError } from "@/lib/api-client";
 import { Permission } from "@/components/templates/Permission";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
@@ -73,6 +76,7 @@ export function OrdersPageContainer() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewAccess, setViewAccess] = useState<"pending" | "allowed" | "denied">("pending");
   const [isLoading, setIsLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [status, setStatus] = useState<OrderStatus | "all">("all");
@@ -177,6 +181,7 @@ export function OrdersPageContainer() {
           return;
         }
 
+        setViewAccess("allowed");
         setOrders(result.data);
         setTotalOrders(result.total);
         setTotalPages(result.totalPages);
@@ -191,6 +196,11 @@ export function OrdersPageContainer() {
         setTotalOrders(0);
         setTotalPages(1);
         setIsLoading(false);
+        if (error instanceof ApiError && error.status === 403) {
+          setViewAccess("denied");
+          return;
+        }
+        setViewAccess("allowed");
         showToast(error.message || "Failed to load orders.", "error");
       });
 
@@ -359,6 +369,9 @@ export function OrdersPageContainer() {
   const rangeEnd = isSearching
     ? displayedOrders.length
     : Math.min((page - 1) * toApiPageSize(pageSize) + displayedOrders.length, totalOrders);
+
+  if (viewAccess === "denied") return <AccessDenied />;
+  if (viewAccess === "pending") return <div className="flex justify-center py-24"><Spinner /></div>;
 
   return (
     <section className="space-y-6">

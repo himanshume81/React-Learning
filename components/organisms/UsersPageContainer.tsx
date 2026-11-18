@@ -1,5 +1,7 @@
 "use client";
 
+import { AccessDenied } from "@/components/templates/AccessDenied";
+import { ApiError } from "@/lib/api-client";
 import { Permission } from "@/components/templates/Permission";
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
@@ -48,6 +50,7 @@ export function UsersPageContainer({
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [viewDenied, setViewDenied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchInput, setSearchInput] = useState("");
@@ -84,12 +87,17 @@ export function UsersPageContainer({
       pageSize: toApiPageSize(pageSize),
     }).then((result) => {
       if (ignore) return;
+      setViewDenied(false);
       setUsers(result.data);
       setTotal(result.total);
       setTotalPages(result.totalPages);
       setIsLoading(false);
     }).catch((error: unknown) => {
       if (ignore) return;
+      if (error instanceof ApiError && error.status === 403) {
+        setViewDenied(true);
+        return;
+      }
       setRequestError(error instanceof Error ? error.message : "Could not load users.");
       setIsLoading(false);
     });
@@ -131,6 +139,8 @@ export function UsersPageContainer({
       setRefreshKey((key) => key + 1);
     }
   };
+
+  if (viewDenied) return <AccessDenied />;
 
   if (!isLoading && users.length === 0 && targetRole === "user") {
     return (

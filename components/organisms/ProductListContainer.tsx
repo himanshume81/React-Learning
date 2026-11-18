@@ -2,6 +2,8 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { can } from "@/lib/rbac/permissions";
+import { AccessDenied } from "@/components/templates/AccessDenied";
+import { Spinner } from "@/components/atoms/Spinner";
 import { Permission } from "@/components/templates/Permission";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
@@ -106,6 +108,8 @@ function validateProduct(input: ProductInput): FormErrors {
 export function ProductListContainer() {
   const { user } = useAuth();
   const canEditProducts = can(user, "products", "addEdit");
+  const canDeleteProducts = can(user, "products", "delete");
+  const showActions = canEditProducts || canDeleteProducts;
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -123,6 +127,7 @@ export function ProductListContainer() {
   const [assistantMessages, setAssistantMessages] = useState<ProductAssistantMessage[]>([]);
   const assistantMessageId = useRef(0);
   const activeAssistantMessageId = useRef<number | null>(null);
+  const [viewAccess, setViewAccess] = useState<"pending" | "allowed" | "denied">("pending");
   const [loadError, setLoadError] = useState<string | null>(null);
   const requestId = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -234,6 +239,7 @@ export function ProductListContainer() {
       const result = await fetchProductsPage({ page, limit: pageSize });
       if (currentRequest !== requestId.current) return;
 
+      setViewAccess("allowed");
       const totalPages = Math.max(1, result.pagination.totalPages);
       if (pageSize !== "all" && page > totalPages) {
         setPage(totalPages);
@@ -244,6 +250,12 @@ export function ProductListContainer() {
       setPagination({ ...result.pagination, totalPages });
     } catch (error) {
       if (currentRequest !== requestId.current) return;
+      if (!activeSearch && error instanceof ApiError && error.status === 403) {
+        setProducts([]);
+        setViewAccess("denied");
+        return;
+      }
+      if (!activeSearch) setViewAccess("allowed");
       const errorMessage = error instanceof Error ? error.message : "Could not load products. Please try again.";
       setProducts([]);
       setPagination({
@@ -271,7 +283,7 @@ export function ProductListContainer() {
   useEffect(() => {
     let cancelled = false;
     if (!canEditProducts) return;
-    void fetchCategories().then((results) => {
+    void fetchCategories(false).then((results) => {
       if (!cancelled) setCategories(results);
     }).catch(() => {
       if (!cancelled) setLoadError("Could not load categories. Please try again.");
@@ -536,6 +548,9 @@ export function ProductListContainer() {
     products.length > 0 &&
     products.every((product) => selectedProductIds.has(product.id));
 
+  if (viewAccess === "denied") return <AccessDenied />;
+  if (viewAccess === "pending") return <div className="flex justify-center py-24"><Spinner /></div>;
+
   return (
     <section className="space-y-6">
       <input
@@ -651,34 +666,36 @@ export function ProductListContainer() {
                       </Text>
                     </div>
                     <div className="flex items-center gap-2">
-                    <Permission menu="products" action="delete"><input
-                      type="checkbox"
-                      checked={selectedProductIds.has(product.id)}
-                      onChange={() => toggleProductSelection(product.id)}
-                      aria-label={`Select ${product.name}`}
-                      className="h-4 w-4 rounded border-zinc-300 accent-red-600"
-                    /></Permission>
-                    <ActionMenu label={`Actions for ${product.name}`}>
-                      <Link
-                        href={`/products/${product.id}`}
-                        role="menuitem"
-                        className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
-                      >
-                        View
-                      </Link>
-                      <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => void openEditModal(product)}>
-                        Edit
-                      </ActionMenuItem></Permission>
-                      <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(product)}>
-                        {product.status === "active" ? "Deactivate" : "Activate"}
-                      </ActionMenuItem></Permission>
-                      <Permission menu="products" action="delete"><ActionMenuItem
-                        tone="danger"
-                        onSelect={() => setDeleteTarget(product)}
-                      >
-                        Delete
-                      </ActionMenuItem></Permission>
-                    </ActionMenu>
+                      <Permission menu="products" action="delete"><input
+                        type="checkbox"
+                        checked={selectedProductIds.has(product.id)}
+                        onChange={() => toggleProductSelection(product.id)}
+                        aria-label={`Select ${product.name}`}
+                        className="h-4 w-4 rounded border-zinc-300 accent-red-600"
+                      /></Permission>
+                      {showActions && (
+                        <ActionMenu label={`Actions for ${product.name}`}>
+                          <Link
+                            href={`/products/${product.id}`}
+                            role="menuitem"
+                            className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                          >
+                            View
+                          </Link>
+                          <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => void openEditModal(product)}>
+                            Edit
+                          </ActionMenuItem></Permission>
+                          <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(product)}>
+                            {product.status === "active" ? "Deactivate" : "Activate"}
+                          </ActionMenuItem></Permission>
+                          <Permission menu="products" action="delete"><ActionMenuItem
+                            tone="danger"
+                            onSelect={() => setDeleteTarget(product)}
+                          >
+                            Delete
+                          </ActionMenuItem></Permission>
+                        </ActionMenu>
+                      )}
                     </div>
                   </div>
 
@@ -731,16 +748,18 @@ export function ProductListContainer() {
           <table className="w-full min-w-[1100px] text-left">
             <thead>
               <tr className="border-b border-zinc-200 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-800">
-                <th className="w-12 px-4 py-3 font-semibold">
-                  <Permission menu="products" action="delete"><input
-                    type="checkbox"
-                    checked={currentPageIsSelected}
-                    onChange={toggleCurrentPageSelection}
-                    disabled={products.length === 0 || isLoading}
-                    aria-label="Select all products on this page"
-                    className="h-4 w-4 rounded border-zinc-300 accent-red-600"
-                  /></Permission>
-                </th>
+                {canDeleteProducts && (
+                  <th className="w-12 px-4 py-3 font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={currentPageIsSelected}
+                      onChange={toggleCurrentPageSelection}
+                      disabled={products.length === 0 || isLoading}
+                      aria-label="Select all products on this page"
+                      className="h-4 w-4 rounded border-zinc-300 accent-red-600"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 font-semibold">ID</th>
                 <th className="px-4 py-3 font-semibold">Product</th>
                 <th className="px-4 py-3 font-semibold">SKU</th>
@@ -748,7 +767,7 @@ export function ProductListContainer() {
                 <th className="px-4 py-3 font-semibold">Price</th>
                 <th className="px-4 py-3 font-semibold">Stock</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Actions</th>
+                {showActions && <th className="px-4 py-3 font-semibold">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -758,9 +777,9 @@ export function ProductListContainer() {
                     key={index}
                     className="border-b border-zinc-200 last:border-0 dark:border-zinc-800"
                   >
-                    <td className="px-4 py-3">
-                      <Skeleton className="h-4 w-4" />
-                    </td>
+                    {canDeleteProducts && (
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-4" /></td>
+                    )}
                     <td className="px-4 py-3">
                       <Skeleton className="h-4 w-20" />
                     </td>
@@ -783,26 +802,28 @@ export function ProductListContainer() {
                     <td className="px-4 py-3">
                       <Skeleton className="h-6 w-20 rounded-full" />
                     </td>
-                    <td className="px-4 py-3">
-                      <Skeleton className="h-8 w-10 rounded-lg" />
-                    </td>
+                    {showActions && (
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-10 rounded-lg" /></td>
+                    )}
                   </tr>
                 ))
               ) : (
                 products.map((product) => (
                   <tr
                     key={product.id}
-                    className={`border-b border-zinc-200 last:border-0 dark:border-zinc-800 ${selectedProductIds.has(product.id) ? "bg-red-50/60 dark:bg-red-950/20" : ""}`}
+                    className={`border-b border-zinc-200 last:border-0 dark:border-zinc-800 ${canDeleteProducts && selectedProductIds.has(product.id) ? "bg-red-50/60 dark:bg-red-950/20" : ""}`}
                   >
-                    <td className="px-4 py-3">
-                      <Permission menu="products" action="delete"><input
-                        type="checkbox"
-                        checked={selectedProductIds.has(product.id)}
-                        onChange={() => toggleProductSelection(product.id)}
-                        aria-label={`Select ${product.name}`}
-                        className="h-4 w-4 rounded border-zinc-300 accent-red-600"
-                      /></Permission>
-                    </td>
+                    {canDeleteProducts && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedProductIds.has(product.id)}
+                          onChange={() => toggleProductSelection(product.id)}
+                          aria-label={`Select ${product.name}`}
+                          className="h-4 w-4 rounded border-zinc-300 accent-red-600"
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <Link
                         href={`/products/${product.id}`}
@@ -856,29 +877,31 @@ export function ProductListContainer() {
                         {product.status}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
-                      <ActionMenu label={`Actions for ${product.name}`}>
-                        <Link
-                          href={`/products/${product.id}`}
-                          role="menuitem"
-                          className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
-                        >
-                          View
-                        </Link>
-                        <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => void openEditModal(product)}>
-                          Edit
-                        </ActionMenuItem></Permission>
-                        <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(product)}>
-                          {product.status === "active" ? "Deactivate" : "Activate"}
-                        </ActionMenuItem></Permission>
-                        <Permission menu="products" action="delete"><ActionMenuItem
-                          tone="danger"
-                          onSelect={() => setDeleteTarget(product)}
-                        >
-                          Delete
-                        </ActionMenuItem></Permission>
-                      </ActionMenu>
-                    </td>
+                    {showActions && (
+                      <td className="px-4 py-3">
+                        <ActionMenu label={`Actions for ${product.name}`}>
+                          <Link
+                            href={`/products/${product.id}`}
+                            role="menuitem"
+                            className="flex rounded-lg px-3 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                          >
+                            View
+                          </Link>
+                          <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => void openEditModal(product)}>
+                            Edit
+                          </ActionMenuItem></Permission>
+                          <Permission menu="products" action="addEdit"><ActionMenuItem onSelect={() => handleToggleStatus(product)}>
+                            {product.status === "active" ? "Deactivate" : "Activate"}
+                          </ActionMenuItem></Permission>
+                          <Permission menu="products" action="delete"><ActionMenuItem
+                            tone="danger"
+                            onSelect={() => setDeleteTarget(product)}
+                          >
+                            Delete
+                          </ActionMenuItem></Permission>
+                        </ActionMenu>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

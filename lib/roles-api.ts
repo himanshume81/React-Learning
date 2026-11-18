@@ -12,11 +12,11 @@ function toRole(raw: RawRole): Role {
     permissions: normalizePermissions(raw.permissions),
   };
 }
-export async function fetchRoles(): Promise<Role[]> {
-  return (await apiFetch<RawRole[]>("/roles", { auth: true })).map(toRole);
+export async function fetchRoles(notifyForbidden = true): Promise<Role[]> {
+  return (await apiFetch<RawRole[]>("/roles", { auth: true, notifyForbidden })).map(toRole);
 }
 export async function fetchRole(id: string): Promise<Role> {
-  return toRole(await apiFetch<RawRole>(`/roles/${encodeURIComponent(id)}`, { auth: true }));
+  return toRole(await apiFetch<RawRole>(`/roles/${encodeURIComponent(id)}`, { auth: true, notifyForbidden: false }));
 }
 export async function saveRole(input: RoleInput, id?: string): Promise<Role> {
   return toRole(await apiFetch<RawRole>(id ? `/roles/${encodeURIComponent(id)}` : "/roles", {

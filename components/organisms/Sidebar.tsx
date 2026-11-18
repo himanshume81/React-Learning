@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Logo } from "@/components/atoms/Logo";
 import { useAuth } from "@/context/AuthContext";
-import { can, isAdmin, MENU_ITEMS } from "@/lib/rbac/permissions";
+import { MENU_ITEMS, routeAllowed } from "@/lib/rbac/permissions";
 
 function routeIsActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -17,12 +17,13 @@ type SidebarNavProps = {
 };
 
 function SidebarNav({ pathname, onNavigate }: SidebarNavProps) {
-  const { user } = useAuth();
-  const navigation = MENU_ITEMS.filter(({ key }) => can(user, key));
-  const items = isAdmin(user) ? [...navigation, { key: "roles", label: "Roles", href: "/roles" }] : navigation;
+  const { user, status } = useAuth();
+  const items = [...MENU_ITEMS, { label: "Roles", href: "/roles" }].filter(
+    ({ href }) => routeAllowed(user, href),
+  );
   return (
     <nav aria-label="Primary navigation" className="py-4">
-      {items.length === 0 && <p className="px-[22px] text-sm text-zinc-500">No access assigned</p>}
+      {status === "authenticated" && user && items.length === 0 && <p className="px-[22px] text-sm text-zinc-500">No access assigned</p>}
       {items.map((item) => {
         const active = routeIsActive(pathname, item.href);
         return (

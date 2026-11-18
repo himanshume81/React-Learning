@@ -40,9 +40,9 @@ export function DashboardOverview() {
     };
   }, [canViewUsers]);
 
-  if (error) return <p role="alert" className="text-red-600">{error}</p>;
-
   if (!canViewUsers) return <section><Text as="h1" className="text-2xl font-semibold">Dashboard</Text><Text className="mt-2 text-zinc-500">Welcome. Use the sidebar to open your available pages.</Text></section>;
+
+  if (error) return <p role="alert" className="text-red-600">{error}</p>;
 
   return (
     <section className="space-y-6">

@@ -1,5 +1,9 @@
 "use client";
 
+import { AccessDenied } from "@/components/templates/AccessDenied";
+import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/api-client";
+import { can } from "@/lib/rbac/permissions";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
@@ -10,25 +14,36 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export function CategoryDetailContainer({ categoryId }: { categoryId: string }) {
+  const { user } = useAuth();
+  const canViewProducts = can(user, "products");
+  const [viewDenied, setViewDenied] = useState(false);
   const [category, setCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let ignore = false;
 
-    fetchCategoryById(categoryId).then((result) => {
+    fetchCategoryById(categoryId, canViewProducts).then((result) => {
       if (ignore) {
         return;
       }
 
+      setViewDenied(false);
       setCategory(result);
+      setIsLoading(false);
+    }).catch((error: unknown) => {
+      if (ignore) return;
+      setCategory(null);
+      setViewDenied(error instanceof ApiError && error.status === 403);
       setIsLoading(false);
     });
 
     return () => {
       ignore = true;
     };
-  }, [categoryId]);
+  }, [categoryId, canViewProducts]);
+
+  if (viewDenied) return <AccessDenied />;
 
   if (isLoading) {
     return (
@@ -81,10 +96,11 @@ export function CategoryDetailContainer({ categoryId }: { categoryId: string }) 
             <Badge tone={category.status === "active" ? "success" : "neutral"}>
               {category.status}
             </Badge>
-            <Badge tone="info">
-              {category.productCount ?? 0} product
-              {(category.productCount ?? 0) === 1 ? "" : "s"}
-            </Badge>
+            {canViewProducts && category.productCount !== undefined && (
+              <Badge tone="info">
+                {category.productCount} product{category.productCount === 1 ? "" : "s"}
+              </Badge>
+            )}
           </div>
         </div>
       </div>
