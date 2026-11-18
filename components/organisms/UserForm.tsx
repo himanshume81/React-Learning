@@ -5,7 +5,9 @@ import { Text } from "@/components/atoms/Text";
 import { FormField } from "@/components/molecules/FormField";
 import { ApiError } from "@/lib/api-client";
 import { userSchema, type UserFormValues } from "@/lib/validation/user-schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchRoles } from "@/lib/roles-api";
+import type { Role } from "@/types/role";
 import { useForm } from "react-hook-form";
 
 type UserFormProps = {
@@ -16,6 +18,21 @@ type UserFormProps = {
 };
 
 export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormProps) {
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [rolesError, setRolesError] = useState<string | null>(null);
+  const [rolesRetry, setRolesRetry] = useState(0);
+  useEffect(() => {
+    let ignore = false;
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRolesLoading(true);
+    setRolesError(null);
+    fetchRoles().then((data) => { if (!ignore) setRoles(data); })
+      .catch((error: unknown) => { if (!ignore) setRolesError(error instanceof Error ? error.message : "Could not load roles."); })
+      .finally(() => { if (!ignore) setRolesLoading(false); });
+    return () => { ignore = true; };
+  }, [rolesRetry]);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -30,7 +47,7 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
       email: "",
       phoneNumber: "",
       password: "",
-      role: "admin",
+      roleId: "",
       status: "active",
     },
   });
@@ -94,15 +111,15 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
           {...register("phoneNumber")}
         />
 
-        <input type="hidden" value="admin" {...register("role")} />
-
         <div className="space-y-1.5">
-          <Text as="span" className="text-sm font-medium">
-            Role
-          </Text>
-          <Text className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-            Admin
-          </Text>
+          <label htmlFor="roleId" className="text-sm font-medium">Role</label>
+          <select id="roleId" {...register("roleId")} disabled={rolesLoading || Boolean(rolesError)} aria-invalid={Boolean(errors.roleId)} className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+            <option value="">{rolesLoading ? "Loading roles..." : "Select a role"}</option>
+            {roles.map((role) => <option key={role.id} value={role.id} disabled={role.status === "inactive"}>{role.name}{role.status === "inactive" ? " (Inactive)" : ""}</option>)}
+          </select>
+          {errors.roleId && <Text role="alert" className="text-sm text-red-600">{errors.roleId.message}</Text>}
+          {rolesError && <div role="alert" className="text-sm text-red-600">{rolesError} <button type="button" onClick={() => setRolesRetry((value) => value + 1)}>Retry</button></div>}
+          {!rolesLoading && !rolesError && roles.length === 0 && <Text>No roles available. Create a role first.</Text>}
         </div>
 
         <select
@@ -127,7 +144,7 @@ export function UserForm({ mode, defaultValues, onSubmit, onCancel }: UserFormPr
       )}
 
       <div className="flex gap-3">
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || rolesLoading || Boolean(rolesError) || roles.length === 0}>
           {isSubmitting
             ? mode === "create"
               ? "Creating..."

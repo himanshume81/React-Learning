@@ -1,3 +1,6 @@
+"use client";
+
+import { Permission } from "@/components/templates/Permission";
 import { Avatar } from "@/components/atoms/Avatar";
 import { Badge } from "@/components/atoms/Badge";
 import { Button } from "@/components/atoms/Button";
@@ -30,7 +33,7 @@ export function UserCard({ user, onDelete }: UserCardProps) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Badge tone="info">{user.role}</Badge>
+        <Badge tone="info">{user.roleName ?? "Unassigned"}</Badge>
         <Badge tone={user.status === "active" ? "success" : "neutral"}>
           {user.status}
         </Badge>
@@ -46,15 +49,15 @@ export function UserCard({ user, onDelete }: UserCardProps) {
         >
           View
         </Link>
-        <Link
+        <Permission menu="users" action="addEdit"><Link
           href={`/users/${user.id}/edit`}
           className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-900"
         >
           Edit
-        </Link>
-        <Button variant="ghost" onClick={() => onDelete(user)}>
+        </Link></Permission>
+        <Permission menu="users" action="delete"><Button variant="ghost" onClick={() => onDelete(user)}>
           Delete
-        </Button>
+        </Button></Permission>
       </div>
     </div>
   );

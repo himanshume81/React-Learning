@@ -12,7 +12,6 @@ export function AddUserContainer() {
   const handleSubmit = async (values: UserFormValues) => {
     await createUser({
       ...values,
-      role: "admin",
     });
     router.push("/users");
   };

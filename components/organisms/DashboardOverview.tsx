@@ -1,5 +1,7 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { can } from "@/lib/rbac/permissions";
 import { KPICard } from "@/components/molecules/KPICard";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Text } from "@/components/atoms/Text";
@@ -11,6 +13,9 @@ import { useEffect, useState } from "react";
 type Stats = { total: number; active: number; inactive: number };
 
 export function DashboardOverview() {
+  const { user } = useAuth();
+  const canViewUsers = can(user, "users");
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,6 +23,7 @@ export function DashboardOverview() {
   useEffect(() => {
     let ignore = false;
 
+    if (!canViewUsers) return;
     Promise.all([fetchUserStats(), fetchRecentActivity()]).then(
       ([statsResult, activityResult]) => {
         if (ignore) return;
@@ -25,12 +31,18 @@ export function DashboardOverview() {
         setActivity(activityResult);
         setIsLoading(false);
       }
-    );
+    ).catch((error: unknown) => {
+      if (!ignore) { setError(error instanceof Error ? error.message : "Could not load dashboard."); setIsLoading(false); }
+    });
 
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [canViewUsers]);
+
+  if (!canViewUsers) return <section><Text as="h1" className="text-2xl font-semibold">Dashboard</Text><Text className="mt-2 text-zinc-500">Welcome. Use the sidebar to open your available pages.</Text></section>;
+
+  if (error) return <p role="alert" className="text-red-600">{error}</p>;
 
   return (
     <section className="space-y-6">

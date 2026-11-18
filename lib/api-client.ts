@@ -30,9 +30,10 @@ type ApiFetchOptions = Omit<RequestInit, "body"> & {
   // Attaches the access token and, on a 401, transparently refreshes it and
   // retries the request once before giving up.
   auth?: boolean;
+  notifyForbidden?: boolean;
 };
 
-async function rawRequest<T>(path: string, { body, auth, headers, ...init }: ApiFetchOptions): Promise<T> {
+async function rawRequest<T>(path: string, { body, auth, headers, notifyForbidden = true, ...init }: ApiFetchOptions): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
 
   let response: Response;
@@ -64,7 +65,12 @@ async function rawRequest<T>(path: string, { body, auth, headers, ...init }: Api
   }
 
   if (!response.ok) {
-    throw new ApiError(extractMessage(data, "Something went wrong. Please try again."), response.status);
+    const fallback = response.status === 403 ? "You do not have permission to perform this action." : "Something went wrong. Please try again.";
+    const message = extractMessage(data, fallback);
+    if (response.status === 403 && notifyForbidden && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("api:forbidden", { detail: message }));
+    }
+    throw new ApiError(message, response.status);
   }
 
   return data as T;

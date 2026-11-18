@@ -1,5 +1,11 @@
 "use client";
 
+import { useAuth } from "@/context/AuthContext";
+import { can } from "@/lib/rbac/permissions";
+import { AccessDenied } from "@/components/templates/AccessDenied";
+import { Spinner } from "@/components/atoms/Spinner";
+import { ApiError } from "@/lib/api-client";
+import { Permission } from "@/components/templates/Permission";
 import { Button } from "@/components/atoms/Button";
 import { Input } from "@/components/atoms/Input";
 import { Select } from "@/components/atoms/Select";
@@ -65,10 +71,12 @@ function formatMoney(amount: number) {
 }
 
 export function OrdersPageContainer() {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewAccess, setViewAccess] = useState<"pending" | "allowed" | "denied">("pending");
   const [isLoading, setIsLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [status, setStatus] = useState<OrderStatus | "all">("all");
@@ -152,11 +160,15 @@ export function OrdersPageContainer() {
   const debouncedSearch = useDebounce(searchInput, 300);
 
   useEffect(() => {
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [status, pageSize]);
 
   useEffect(() => {
     let ignore = false;
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
 
     fetchOrders({
@@ -169,6 +181,7 @@ export function OrdersPageContainer() {
           return;
         }
 
+        setViewAccess("allowed");
         setOrders(result.data);
         setTotalOrders(result.total);
         setTotalPages(result.totalPages);
@@ -183,6 +196,11 @@ export function OrdersPageContainer() {
         setTotalOrders(0);
         setTotalPages(1);
         setIsLoading(false);
+        if (error instanceof ApiError && error.status === 403) {
+          setViewAccess("denied");
+          return;
+        }
+        setViewAccess("allowed");
         showToast(error.message || "Failed to load orders.", "error");
       });
 
@@ -192,6 +210,7 @@ export function OrdersPageContainer() {
   }, [page, pageSize, status, ordersVersion, showToast]);
 
   async function handleStatusChange(order: Order, nextStatus: OrderStatus) {
+    if (!can(user, "orders", "addEdit")) return;
     setUpdatingOrderId(order.id);
 
     try {
@@ -210,6 +229,7 @@ export function OrdersPageContainer() {
   }
 
   async function openCreateOrderModal() {
+    if (!can(user, "orders", "addEdit")) return;
     setIsCreateModalOpen(true);
     setIsLoadingProducts(true);
     setOrderProducts([]);
@@ -276,6 +296,7 @@ export function OrdersPageContainer() {
   }
 
   async function handleCreateOrder() {
+    if (!can(user, "orders", "addEdit")) return;
     const userId = Number(selectedUserId);
 
     if (!Number.isInteger(userId) || userId <= 0) {
@@ -349,6 +370,9 @@ export function OrdersPageContainer() {
     ? displayedOrders.length
     : Math.min((page - 1) * toApiPageSize(pageSize) + displayedOrders.length, totalOrders);
 
+  if (viewAccess === "denied") return <AccessDenied />;
+  if (viewAccess === "pending") return <div className="flex justify-center py-24"><Spinner /></div>;
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -360,7 +384,7 @@ export function OrdersPageContainer() {
             Review orders and filter the list by any available order status.
           </Text>
         </div>
-        <Button onClick={() => void openCreateOrderModal()}>Create order</Button>
+        <Permission menu="orders" action="addEdit"><Button onClick={() => void openCreateOrderModal()}>Create order</Button></Permission>
       </div>
 
       <div
@@ -575,7 +599,7 @@ export function OrdersPageContainer() {
         </>
       )}
 
-      <Modal
+      <Permission menu="orders" action="addEdit"><Modal
         open={isCreateModalOpen}
         onClose={closeCreateOrderModal}
         title="Create order"
@@ -719,7 +743,7 @@ export function OrdersPageContainer() {
             </div>
           </div>
         )}
-      </Modal>
+      </Modal></Permission>
 
       <Pagination
         page={page}

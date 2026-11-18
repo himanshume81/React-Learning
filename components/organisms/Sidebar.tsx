@@ -4,18 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { Logo } from "@/components/atoms/Logo";
-type NavItem = {
-  href: string;
-  label: string;
-};
-
-const navigation: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Orders", href: "/orders" },
-  { label: "Customers", href: "/customers" },
-  { label: "Products", href: "/products" },
-  { label: "Category", href: "/categories" },
-];
+import { useAuth } from "@/context/AuthContext";
+import { MENU_ITEMS, routeAllowed } from "@/lib/rbac/permissions";
 
 function routeIsActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -27,9 +17,14 @@ type SidebarNavProps = {
 };
 
 function SidebarNav({ pathname, onNavigate }: SidebarNavProps) {
+  const { user, status } = useAuth();
+  const items = [...MENU_ITEMS, { label: "Roles", href: "/roles" }].filter(
+    ({ href }) => routeAllowed(user, href),
+  );
   return (
     <nav aria-label="Primary navigation" className="py-4">
-      {navigation.map((item) => {
+      {status === "authenticated" && user && items.length === 0 && <p className="px-[22px] text-sm text-zinc-500">No access assigned</p>}
+      {items.map((item) => {
         const active = routeIsActive(pathname, item.href);
         return (
           <Link

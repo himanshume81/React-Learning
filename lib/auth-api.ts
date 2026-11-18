@@ -65,6 +65,6 @@ export async function setPassword(token: string, password: string): Promise<stri
 }
 
 export async function fetchProfile(): Promise<User> {
-  const raw = await apiFetch<RawUser>("/auth/profile", { auth: true });
+  const raw = await apiFetch<RawUser>("/auth/profile", { auth: true, cache: "no-store" });
   return toUser(raw);
 }

@@ -1,5 +1,8 @@
 "use client";
 
+import { AccessDenied } from "@/components/templates/AccessDenied";
+import { ApiError } from "@/lib/api-client";
+import { Permission } from "@/components/templates/Permission";
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
 import { EmptyState } from "@/components/molecules/EmptyState";
@@ -37,7 +40,7 @@ type UsersPageContainerProps = {
 };
 
 export function UsersPageContainer({
-  targetRole = "admin",
+  targetRole = "all",
   title = "Users",
   description = "Search, filter, and manage user accounts.",
   addHref = "/users/add",
@@ -46,6 +49,8 @@ export function UsersPageContainer({
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [viewDenied, setViewDenied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchInput, setSearchInput] = useState("");
@@ -62,12 +67,17 @@ export function UsersPageContainer({
   // Filters changed: results and total pages will change, so any page > 1
   // is no longer guaranteed valid. Reset to the first page.
   useEffect(() => {
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
   }, [debouncedSearch, status, pageSize]);
 
   useEffect(() => {
     let ignore = false;
+    // Reset loading/pagination for this external data request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
+    setRequestError(null);
 
     fetchUsers({
       search: debouncedSearch,
@@ -77,16 +87,25 @@ export function UsersPageContainer({
       pageSize: toApiPageSize(pageSize),
     }).then((result) => {
       if (ignore) return;
+      setViewDenied(false);
       setUsers(result.data);
       setTotal(result.total);
       setTotalPages(result.totalPages);
+      setIsLoading(false);
+    }).catch((error: unknown) => {
+      if (ignore) return;
+      if (error instanceof ApiError && error.status === 403) {
+        setViewDenied(true);
+        return;
+      }
+      setRequestError(error instanceof Error ? error.message : "Could not load users.");
       setIsLoading(false);
     });
 
     return () => {
       ignore = true;
     };
-  }, [debouncedSearch, status, page, pageSize, refreshKey]);
+  }, [debouncedSearch, status, page, pageSize, refreshKey, targetRole]);
 
   // Position of the current page's results within the full filtered set,
   // e.g. "11-18 of 18" rather than the ambiguous "8 of 18" on the last page.
@@ -97,7 +116,13 @@ export function UsersPageContainer({
   const handleConfirmDelete = async () => {
     if (!userPendingDelete) return;
     setIsDeleting(true);
-    await deleteUser(userPendingDelete.id);
+    try { await deleteUser(userPendingDelete.id); }
+    catch (error) {
+      setRequestError(error instanceof Error ? error.message : "Could not delete user.");
+      setIsDeleting(false);
+      setUserPendingDelete(null);
+      return;
+    }
     setIsDeleting(false);
     setUserPendingDelete(null);
 
@@ -115,9 +140,12 @@ export function UsersPageContainer({
     }
   };
 
+  if (viewDenied) return <AccessDenied />;
+
   if (!isLoading && users.length === 0 && targetRole === "user") {
     return (
       <section className="space-y-6">
+      {requestError && <p role="alert" className="text-sm text-red-600">{requestError}</p>}
         <div>
           <Text as="h1" className="text-2xl font-semibold">
             {title}
@@ -144,6 +172,7 @@ export function UsersPageContainer({
 
   return (
     <section className="space-y-6">
+      {requestError && <p role="alert" className="text-sm text-red-600">{requestError}</p>}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Text as="h1" className="text-2xl font-semibold">
@@ -154,9 +183,9 @@ export function UsersPageContainer({
           </Text>
         </div>
         {addHref ? (
-          <Link href={addHref}>
+          <Permission menu="users" action="addEdit"><Link href={addHref}>
             <Button>{addLabel}</Button>
-          </Link>
+          </Link></Permission>
         ) : null}
       </div>
 
@@ -185,7 +214,7 @@ export function UsersPageContainer({
       />
 
       {userPendingDelete && (
-        <ConfirmDialog
+        <Permission menu="users" action="delete"><ConfirmDialog
           open
           title="Delete user"
           message={`Are you sure you want to delete ${userPendingDelete.name}? This can't be undone.`}
@@ -193,7 +222,7 @@ export function UsersPageContainer({
           isPending={isDeleting}
           onConfirm={handleConfirmDelete}
           onCancel={() => setUserPendingDelete(null)}
-        />
+        /></Permission>
       )}
     </section>
   );

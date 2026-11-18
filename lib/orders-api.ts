@@ -135,6 +135,7 @@ export async function fetchOrders({ page, limit, status }: OrderListQuery): Prom
 
   const raw = await apiFetch<OrderListResponse>(`/orders/all?${query.toString()}`, {
     auth: true,
+    notifyForbidden: false,
   });
   const data = normalizeOrderListResponse(raw).map(toOrder);
   const metadata = Array.isArray(raw) ? undefined : raw.pagination ?? raw.meta ?? raw;
